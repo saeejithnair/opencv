@@ -44,7 +44,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core.hpp"
+
 using namespace std;
 #ifdef HAVE_OPENCL
 
@@ -71,11 +71,11 @@ TEST_P(HOG, GetDescriptors)
     switch (type)
     {
     case CV_8UC1:
-        cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
         break;
     }
     cv::ocl::oclMat d_img(img);
@@ -128,11 +128,11 @@ TEST_P(HOG, Detect)
     switch (type)
     {
     case CV_8UC1:
-        cv::cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cv::cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
         break;
     }
     cv::ocl::oclMat d_img(img);
@@ -199,8 +199,8 @@ TEST_P(HOG, Detect)
 
     int threshold = 10;
     int val = 32;
-    d_comp[0] = d_found.size();
-    comp[0] = found.size();
+    d_comp[0] = (int)d_found.size();
+    comp[0] = (int)found.size();
     if (winSize == cv::Size(48, 96))
     {
         for(int i = 0; i < (int)d_found.size(); i++)
@@ -240,12 +240,11 @@ TEST_P(HOG, Detect)
         }
     }
 
-    char s[100] = {0};
-    EXPECT_MAT_NEAR(cv::Mat(d_comp), cv::Mat(comp), 3, s);
+    EXPECT_MAT_NEAR(cv::Mat(d_comp), cv::Mat(comp), 3);
 }
 
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HOG, testing::Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
                             testing::Values(cv::Size(64, 128), cv::Size(48, 96)),
                             testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
 

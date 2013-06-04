@@ -13,16 +13,16 @@ Script will create <outputdir>, if it's missing, and a few its subdirectories:
 
     <outputdir>
         build/
-            iPhoneOS/
+            iPhoneOS-*/
                [cmake-generated build tree for an iOS device target]
             iPhoneSimulator/
                [cmake-generated build tree for iOS simulator]
-        OpenCV.framework/
+        opencv2.framework/
             [the framework content]
 
 The script should handle minor OpenCV updates efficiently
 - it does not recompile the library from scratch each time.
-However, OpenCV.framework directory is erased and recreated on each run.
+However, opencv2.framework directory is erased and recreated on each run.
 """
 
 import glob, re, os, os.path, shutil, string, sys
@@ -103,10 +103,10 @@ def put_framework_together(srcroot, dstroot):
     # TODO ...
 
     # make symbolic links
-    os.symlink(dstdir + "/Headers", "Headers")
-    os.symlink(dstdir + "/Resources", "Resources")
-    os.symlink(dstdir + "/opencv2", "opencv2")
     os.symlink("A", "Versions/Current")
+    os.symlink("Versions/Current/Headers", "Headers")
+    os.symlink("Versions/Current/Resources", "Resources")
+    os.symlink("Versions/Current/opencv2", "opencv2")
 
 
 def build_framework(srcroot, dstroot):

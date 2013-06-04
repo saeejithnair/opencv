@@ -2151,7 +2151,7 @@ void cv::calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray 
         Mat _data(static_cast<int>(src.size()), size.area(), type);
 
         int i = 0;
-        for(vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )
+        for(std::vector<cv::Mat>::iterator each = src.begin(); each != src.end(); each++, i++ )
         {
             CV_Assert( (*each).size() == size && (*each).type() == type );
             Mat dataRow(size.height, size.width, type, _data.ptr(i));
@@ -2306,11 +2306,6 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
         CV_Error( CV_StsUnsupportedFormat, "" );
 
     return std::sqrt(result);
-}
-
-double cv::Mahalonobis( InputArray _v1, InputArray _v2, InputArray _icovar )
-{
-    return Mahalanobis(_v1, _v2, _icovar);
 }
 
 /****************************************************************************************\
@@ -2855,8 +2850,9 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 
     if( _mean.data )
     {
-        CV_Assert( _mean.size() == mean_sz );
+        CV_Assert( _mean.size() == mean_sz );        
         _mean.convertTo(mean, ctype);
+        covar_flags |= CV_COVAR_USE_AVG; 
     }
 
     calcCovarMatrix( data, covar, mean, covar_flags, ctype );

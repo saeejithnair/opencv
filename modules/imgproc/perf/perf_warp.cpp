@@ -23,47 +23,51 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode );
 PERF_TEST_P( TestWarpAffine, WarpAffine,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),
-                ValuesIn( InterType::all() ),
-                ValuesIn( BorderMode::all() )
+                InterType::all(),
+                BorderMode::all()
              )
 )
 {
-    Size sz;
+    Size sz, szSrc(512, 512);
     int borderMode, interType;
     sz         = get<0>(GetParam());
     interType  = get<1>(GetParam());
     borderMode = get<2>(GetParam());
+    Scalar borderColor = Scalar::all(150);
 
-    Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
-    cvtColor(img, src, COLOR_BGR2RGBA, 4);
+    Mat src(szSrc,CV_8UC4), dst(sz, CV_8UC4);
+    cvtest::fillGradient(src);
+    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
     Mat warpMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
-    Mat dst(sz, CV_8UC4);
-
     declare.in(src).out(dst);
 
-    TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
+    TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode, borderColor );
 
-    SANITY_CHECK(dst);
-
+#ifdef ANDROID
+    SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
+#else
+    SANITY_CHECK(dst, 1);
+#endif
 }
 
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),
-                ValuesIn( InterType::all() ),
-                ValuesIn( BorderMode::all() )
+                InterType::all(),
+                BorderMode::all()
              )
 )
 {
-    Size sz;
+    Size sz, szSrc(512, 512);
     int borderMode, interType;
     sz         = get<0>(GetParam());
     interType  = get<1>(GetParam());
     borderMode = get<2>(GetParam());
+    Scalar borderColor = Scalar::all(150);
 
-
-    Mat src, img = imread(getDataPath("cv/shared/fruits.png"));
-    cvtColor(img, src, COLOR_BGR2RGBA, 4);
+    Mat src(szSrc,CV_8UC4), dst(sz, CV_8UC4);
+    cvtest::fillGradient(src);
+    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
     Mat rotMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
     Mat warpMat(3, 3, CV_64FC1);
     for(int r=0; r<2; r++)
@@ -72,25 +76,23 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     warpMat.at<double>(2, 0) = .3/sz.width;
     warpMat.at<double>(2, 1) = .3/sz.height;
     warpMat.at<double>(2, 2) = 1;
-    Mat dst(sz, CV_8UC4);
 
     declare.in(src).out(dst);
 
-    TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, Scalar::all(150) );
+    TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, borderColor );
 
-    SANITY_CHECK(dst);
+#ifdef ANDROID
+    SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
+#else
+    SANITY_CHECK(dst, 1);
+#endif
 }
 
 PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
              Combine(
-                 Values( Size(176,144), Size(320,240), Size(352,288), Size(480,480),
-                         Size(640,480), Size(704,576), Size(720,408), Size(720,480),
-                         Size(720,576), Size(768,432), Size(800,448), Size(960,720),
-                         Size(1024,768), Size(1280,720), Size(1280,960), Size(1360,720),
-                         Size(1600,1200), Size(1920,1080), Size(2048,1536), Size(2592,1920),
-                         Size(2592,1944), Size(3264,2448), Size(4096,3072), Size(4208,3120) ),
-                 ValuesIn( InterType::all() ),
-                 ValuesIn( BorderMode::all() ),
+                 Values( Size(640,480), Size(1920,1080), Size(2592,1944) ),
+                 InterType::all(),
+                 BorderMode::all(),
                  Values( CV_8UC1, CV_8UC4 )
                  )
              )
@@ -101,25 +103,12 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     interType  = get<1>(GetParam());
     borderMode = get<2>(GetParam());
     type       = get<3>(GetParam());
+    Scalar borderColor = Scalar::all(150);
 
-    Mat src, img = imread(getDataPath("cv/shared/5MP.png"));
-
-    if( type == CV_8UC1 )
-    {
-        cvtColor(img, src, COLOR_BGR2GRAY, 1);
-    }
-    else if( type == CV_8UC4 )
-    {
-        cvtColor(img, src, COLOR_BGR2BGRA, 4);
-    }
-    else
-    {
-        FAIL();
-    }
-
-    resize(src, src, size);
-
-    int shift = src.cols*0.04;
+    Mat src(size, type), dst(size, type);
+    cvtest::fillGradient(src);
+    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
+    int shift = static_cast<int>(src.cols*0.04);
     Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0),
                                             Vec2f(static_cast<float>(size.width-1), 0),
                                             Vec2f(static_cast<float>(size.width-1), static_cast<float>(size.height-1)),
@@ -130,25 +119,28 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
                                             Vec2f(static_cast<float>(shift/2), static_cast<float>(size.height-1)));
     Mat warpMat = getPerspectiveTransform(srcVertices, dstVertices);
 
-    Mat dst(size, type);
-
     declare.in(src).out(dst);
+    declare.time(100);
 
     TEST_CYCLE()
     {
-        warpPerspective( src, dst, warpMat, size, interType, borderMode, Scalar::all(150) );
+        warpPerspective( src, dst, warpMat, size, interType, borderMode, borderColor );
     }
 
-    SANITY_CHECK(dst);
+#ifdef ANDROID
+    SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
+#else
+    SANITY_CHECK(dst, 1);
+#endif
 }
 
 PERF_TEST_P( TestRemap, remap,
              Combine(
                  Values( TYPICAL_MAT_TYPES ),
                  Values( szVGA, sz720p, sz1080p ),
-                 ValuesIn( InterType::all() ),
-                 ValuesIn( BorderMode::all() ),
-                 ValuesIn( RemapMode::all() )
+                 InterType::all(),
+                 BorderMode::all(),
+                 RemapMode::all()
                  )
              )
 {

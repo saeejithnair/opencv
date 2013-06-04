@@ -1,9 +1,10 @@
 #include <iostream>
 #include <string>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/gpu.hpp"
+#include "opencv2/highgui.hpp"
 
 using namespace std;
 using namespace cv;
@@ -14,7 +15,6 @@ enum Method
     FGD_STAT,
     MOG,
     MOG2,
-    VIBE,
     GMG
 };
 
@@ -23,7 +23,7 @@ int main(int argc, const char** argv)
     cv::CommandLineParser cmd(argc, argv,
         "{ c camera |             | use camera }"
         "{ f file   | 768x576.avi | input video file }"
-        "{ m method | mog         | method (fgd, mog, mog2, vibe, gmg) }"
+        "{ m method | mog         | method (fgd, mog, mog2, gmg) }"
         "{ h help   |             | print help message }");
 
     if (cmd.has("help") || !cmd.check())
@@ -37,13 +37,19 @@ int main(int argc, const char** argv)
     string file = cmd.get<string>("file");
     string method = cmd.get<string>("method");
 
-    if (method != "fgd" && method != "mog" && method != "mog2" && method != "vibe" && method != "gmg")
+    if (method != "fgd"
+        && method != "mog"
+        && method != "mog2"
+        && method != "gmg")
     {
         cerr << "Incorrect method" << endl;
         return -1;
     }
 
-    Method m = method == "fgd" ? FGD_STAT : method == "mog" ? MOG : method == "mog2" ? MOG2 : method == "vibe" ? VIBE : GMG;
+    Method m = method == "fgd" ? FGD_STAT :
+               method == "mog" ? MOG :
+               method == "mog2" ? MOG2 :
+                                  GMG;
 
     VideoCapture cap;
 
@@ -66,7 +72,6 @@ int main(int argc, const char** argv)
     FGDStatModel fgd_stat;
     MOG_GPU mog;
     MOG2_GPU mog2;
-    VIBE_GPU vibe;
     GMG_GPU gmg;
     gmg.numInitializationFrames = 40;
 
@@ -92,10 +97,6 @@ int main(int argc, const char** argv)
         mog2(d_frame, d_fgmask);
         break;
 
-    case VIBE:
-        vibe.initialize(d_frame);
-        break;
-
     case GMG:
         gmg.initialize(d_frame.size());
         break;
@@ -104,8 +105,10 @@ int main(int argc, const char** argv)
     namedWindow("image", WINDOW_NORMAL);
     namedWindow("foreground mask", WINDOW_NORMAL);
     namedWindow("foreground image", WINDOW_NORMAL);
-    if (m != VIBE && m != GMG)
+    if (m != GMG)
+    {
         namedWindow("mean background image", WINDOW_NORMAL);
+    }
 
     for(;;)
     {
@@ -133,10 +136,6 @@ int main(int argc, const char** argv)
         case MOG2:
             mog2(d_frame, d_fgmask);
             mog2.getBackgroundImage(d_bgimg);
-            break;
-
-        case VIBE:
-            vibe(d_frame, d_fgmask);
             break;
 
         case GMG:

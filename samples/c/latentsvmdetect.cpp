@@ -1,13 +1,7 @@
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
+#include "opencv2/highgui/highgui_c.h"
+#include "opencv2/core/utility.hpp"
 #include <stdio.h>
-
-#ifdef HAVE_CVCONFIG_H
-#include <cvconfig.h>
-#endif
-#ifdef HAVE_TBB
-#include "tbb/task_scheduler_init.h"
-#endif
 
 using namespace cv;
 
@@ -31,36 +25,26 @@ static void detect_and_draw_objects( IplImage* image, CvLatentSvmDetector* detec
     CvSeq* detections = 0;
     int i = 0;
     int64 start = 0, finish = 0;
-#ifdef HAVE_TBB
-    tbb::task_scheduler_init init(tbb::task_scheduler_init::deferred);
-    if (numThreads > 0)
-    {
-        init.initialize(numThreads);
-        printf("Number of threads %i\n", numThreads);
-    }
-    else
-    {
-        printf("Number of threads is not correct for TBB version");
-        return;
-    }
-#endif
+
+    setNumThreads(numThreads);
+    numThreads = getNumThreads();
+    printf("Number of threads %i\n", numThreads);
 
     start = cvGetTickCount();
     detections = cvLatentSvmDetectObjects(image, detector, storage, 0.5f, numThreads);
     finish = cvGetTickCount();
     printf("detection time = %.3f\n", (float)(finish - start) / (float)(cvGetTickFrequency() * 1000000.0));
+    setNumThreads(-1);
 
-#ifdef HAVE_TBB
-    init.terminate();
-#endif
     for( i = 0; i < detections->total; i++ )
     {
         CvObjectDetection detection = *(CvObjectDetection*)cvGetSeqElem( detections, i );
+        float score         = detection.score;
         CvRect bounding_box = detection.rect;
         cvRectangle( image, cvPoint(bounding_box.x, bounding_box.y),
                      cvPoint(bounding_box.x + bounding_box.width,
                             bounding_box.y + bounding_box.height),
-                     CV_RGB(255,0,0), 3 );
+                     CV_RGB(cvRound(255.0f*score),0,0), 3 );
     }
     cvReleaseMemStorage( &storage );
 }

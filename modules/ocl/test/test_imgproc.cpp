@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -183,12 +184,11 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
         if( count == 0 )
             break;
 
-        double icount = 1.0 / count;
-        int x1 = cvFloor(sx * icount);
-        int y1 = cvFloor(sy * icount);
-        s0 = cvFloor(s0 * icount);
-        s1 = cvFloor(s1 * icount);
-        s2 = cvFloor(s2 * icount);
+        int x1 = sx / count;
+        int y1 = sy / count;
+        s0 = s0 / count;
+        s1 = s1 / count;
+        s2 = s2 / count;
 
         bool stopFlag = (x0 == x1 && y0 == y1) || (abs(x1 - x0) + abs(y1 - y0) +
                         tab[s0 - c0 + 255] + tab[s1 - c1 + 255] + tab[s2 - c2 + 255] <= eps);
@@ -213,18 +213,18 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep, cv::Size 
     dptr[3] = (uchar)c3;
 
     COOR coor;
-    coor.x = x0;
-    coor.y = y0;
+    coor.x = (short)x0;
+    coor.y = (short)y0;
     return coor;
 }
 
 void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::TermCriteria crit)
 {
     if( src_roi.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error(cv::Error::StsBadArg, "The input image is empty" );
 
     if( src_roi.depth() != CV_8U || src_roi.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error(cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
 
     CV_Assert( (src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) );
     CV_Assert( !(dst_roi.step & 0x3) );
@@ -260,9 +260,9 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
 {
 
     if( src_roi.empty() )
-        CV_Error( CV_StsBadArg, "The input image is empty" );
+        CV_Error(cv::Error::StsBadArg, "The input image is empty" );
     if( src_roi.depth() != CV_8U || src_roi.channels() != 4 )
-        CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+        CV_Error(cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
     CV_Assert( (src_roi.cols == dst_roi.cols) && (src_roi.rows == dst_roi.rows) &&
                (src_roi.cols == dstCoor_roi.cols) && (src_roi.rows == dstCoor_roi.rows));
     CV_Assert( !(dstCoor_roi.step & 0x3) );
@@ -328,7 +328,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
     cv::Mat mask_roi;
     cv::Mat dst_roi;
     cv::Mat dst1_roi; //bak
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl mat
     cv::ocl::oclMat clmat1;
     cv::ocl::oclMat clmat2;
@@ -353,10 +353,6 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
         double min = 1, max = 20;
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
 
         if(type1 != nulltype)
         {
@@ -446,6 +442,13 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
             clmask_roi = clmask(Rect(maskx, masky, roicols, roirows));
         }
     }
+
+    void Near(double threshold)
+    {
+        cv::Mat cpu_cldst;
+        cldst.download(cpu_cldst);
+        EXPECT_MAT_NEAR(dst, cpu_cldst, threshold);       
+    }
 };
 ////////////////////////////////equalizeHist//////////////////////////////////////////
 
@@ -465,11 +468,7 @@ TEST_P(equalizeHist, Mat)
             random_roi();
             cv::equalizeHist(mat1_roi, dst_roi);
             cv::ocl::equalizeHist(clmat1_roi, cldst_roi);
-            cv::Mat cpu_cldst;
-            cldst.download(cpu_cldst);
-            char sss[1024];
-            sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-            EXPECT_MAT_NEAR(dst, cpu_cldst, 1.1, sss);
+            Near(1.1);
         }
     }
 }
@@ -489,7 +488,7 @@ TEST_P(bilateralFilter, Mat)
     int d = 2 * radius + 1;
     double sigmaspace = 20.0;
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
-    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
 
     if (mat1.depth() != CV_8U || mat1.type() != dst.type())
     {
@@ -498,11 +497,11 @@ TEST_P(bilateralFilter, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
-                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE)) && (mat1_roi.cols <= radius) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
+                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE) && (mat1_roi.cols <= radius)) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
                 {
                     continue;
                 }
@@ -518,25 +517,7 @@ TEST_P(bilateralFilter, Mat)
 
                 cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
                 cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
-
-                cv::Mat cpu_cldst;
-                cldst.download(cpu_cldst);
-
-
-                char sss[1024];
-                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,radius=%d,boredertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, radius, borderstr[i]);
-                //for(int i=0;i<dst.rows;i++)
-                //{
-                //	for(int j=0;j<dst.cols*dst.channels();j++)
-                //	{
-                //		if(dst.at<uchar>(i,j)!=cpu_cldst.at<uchar>(i,j))
-                //		cout<< i <<" "<< j <<" "<< (int)dst.at<uchar>(i,j)<<" "<< (int)cpu_cldst.at<uchar>(i,j)<<"  ";
-                //	}
-                //	cout<<endl;
-                //}
-
-                EXPECT_MAT_NEAR(dst, cpu_cldst, 1.0, sss);
-
+                Near(1.);
             }
     }
 }
@@ -550,7 +531,7 @@ struct CopyMakeBorder : ImgprocTestBase {};
 TEST_P(CopyMakeBorder, Mat)
 {
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
-    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
+    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
     cv::RNG &rng = TS::ptr()->get_rng();
     int top = rng.uniform(0, 10);
     int bottom = rng.uniform(0, 10);
@@ -563,7 +544,7 @@ TEST_P(CopyMakeBorder, Mat)
     }
     else
     {
-        for(int i = 0; i < sizeof(bordertype) / sizeof(int); i++)
+        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
             for(int j = 0; j < LOOP_TIMES; j++)
             {
                 random_roi();
@@ -588,24 +569,12 @@ TEST_P(CopyMakeBorder, Mat)
                 cv::Mat cpu_cldst;
 #ifndef RANDOMROI
                 cldst_roi.download(cpu_cldst);
+                EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0);
 #else
                 cldst.download(cpu_cldst);
+                EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0);
 #endif
-                char sss[1024];
-                sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,top=%d,bottom=%d,left=%d,right=%d, bordertype=%s", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, top, bottom, left, right, borderstr[i]);
-#ifndef RANDOMROI
-                EXPECT_MAT_NEAR(dst_roi, cpu_cldst, 0.0, sss);
-#else
-                //for(int i=0;i<dst.rows;i++)
-                //{
-                //for(int j=0;j<dst.cols;j++)
-                //{
-                //	cout<< (int)dst.at<uchar>(i,j)<<" ";
-                //}
-                //cout<<endl;
-                //}
-                EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
-#endif
+
             }
     }
 }
@@ -628,14 +597,7 @@ TEST_P(cornerMinEigenVal, Mat)
         int borderType = cv::BORDER_REFLECT;
         cv::cornerMinEigenVal(mat1_roi, dst_roi, blockSize, apertureSize, borderType);
         cv::ocl::cornerMinEigenVal(clmat1_roi, cldst_roi, blockSize, apertureSize, borderType);
-
-
-        cv::Mat cpu_cldst;
-        cldst.download(cpu_cldst);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-        EXPECT_MAT_NEAR(dst, cpu_cldst, 1, sss);
+        Near(1.);
     }
 }
 
@@ -658,13 +620,7 @@ TEST_P(cornerHarris, Mat)
         int borderType = cv::BORDER_REFLECT;
         cv::cornerHarris(mat1_roi, dst_roi, blockSize, apertureSize, k, borderType);
         cv::ocl::cornerHarris(clmat1_roi, cldst_roi, blockSize, apertureSize, k, borderType);
-        cv::Mat cpu_cldst;
-        cldst.download(cpu_cldst);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_cldst, 1, sss);
+        Near(1.);
     }
 }
 
@@ -681,15 +637,11 @@ TEST_P(integral, Mat)
 
         cv::ocl::integral(clmat1_roi, cldst_roi, cldst1_roi);
         cv::integral(mat1_roi, dst_roi, dst1_roi);
+        Near(0);
 
-        cv::Mat cpu_cldst, cpu_cldst1;
-        cldst.download(cpu_cldst);
+        cv::Mat cpu_cldst1;
         cldst1.download(cpu_cldst1);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,dst1x=%d,dst1y=%d,maskx=%d,masky=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, dst1x, dst1y, maskx, masky, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_cldst, 0.0, sss);
-        EXPECT_MAT_NEAR(dst1, cpu_cldst1, 0.0, sss);
+        EXPECT_MAT_NEAR(dst1, cpu_cldst1, 0.0);
     }
 }
 
@@ -721,7 +673,7 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -741,10 +693,6 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -792,8 +740,8 @@ TEST_P(WarpAffine, Mat)
 {
     static const double coeffs[2][3] =
     {
-        {cos(3.14 / 6), -sin(3.14 / 6), 100.0},
-        {sin(3.14 / 6), cos(3.14 / 6), -100.0}
+        {cos(CV_PI / 6), -sin(CV_PI / 6), 100.0},
+        {sin(CV_PI / 6), cos(CV_PI / 6), -100.0}
     };
     Mat M(2, 3, CV_64F, (void *)coeffs);
 
@@ -806,10 +754,7 @@ TEST_P(WarpAffine, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, src1x, src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
 
 }
@@ -838,10 +783,7 @@ TEST_P(WarpPerspective, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, src1x, src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
 
 }
@@ -906,12 +848,8 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         interpolation = GET_PARAM(3);
         bordertype = GET_PARAM(4);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
-        cv::Size dstSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
         double min = 5, max = 16;
 
@@ -1006,7 +944,7 @@ TEST_P(Remap, Mat)
         return;
     }
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE/*,BORDER_REFLECT,BORDER_WRAP,BORDER_REFLECT_101*/};
-    const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
+    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE"/*, "BORDER_REFLECT","BORDER_WRAP","BORDER_REFLECT_101"*/};
     // for(int i = 0; i < sizeof(bordertype)/sizeof(int); i++)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1016,13 +954,9 @@ TEST_P(Remap, Mat)
         cv::Mat cpu_dst;
         gdst.download(cpu_dst);
 
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d bordertype=%s", src_roicols, src_roirows, dst_roicols, dst_roirows, srcx, srcy, dstx, dsty, borderstr[0]);
-
-
         if(interpolation == 0)
-            EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
-        EXPECT_MAT_NEAR(dst, cpu_dst, 2.0, sss);
+            EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 2.0);
 
     }
 }
@@ -1053,7 +987,6 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
     int dstx;
     int dsty;
 
-    //std::vector<cv::ocl::Info> oclinfo;
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
@@ -1092,10 +1025,6 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, dsize, type, 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -1151,10 +1080,7 @@ TEST_P(Resize, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "src_roicols=%d,src_roirows=%d,dst_roicols=%d,dst_roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", src_roicols, src_roirows, dst_roicols, dst_roirows, src1x, src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1.0);
     }
 
 }
@@ -1183,7 +1109,7 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
     //src mat with roi
     cv::Mat mat1_roi;
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -1201,11 +1127,6 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
 
         mat1 = randomMat(rng, size, type, 5, 16, false);
         dst  = randomMat(rng, size, type, 5, 16, false);
-
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -1253,12 +1174,7 @@ TEST_P(Threshold, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-
-        //EXPECT_MAT_NEAR(dst, cpu_dst, 1e-5)
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x =%d,src1y=%d,dstx=%d,dsty=%d", roicols, roirows, src1x , src1y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, 1);
     }
 
 }
@@ -1290,7 +1206,6 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
     cv::ocl::oclMat gdst;
     cv::ocl::oclMat gdstCoor;
 
-    //std::vector<cv::ocl::Info> oclinfo;
     //ocl mat with roi
     cv::ocl::oclMat gsrc_roi;
     cv::ocl::oclMat gdst_roi;
@@ -1313,10 +1228,6 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
         dst = randomMat(rng, size, type, 5, 16, false);
         dstCoor = randomMat(rng, size, typeCoor, 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -1369,13 +1280,7 @@ TEST_P(meanShiftFiltering, Mat)
         cv::ocl::meanShiftFiltering(gsrc_roi, gdst_roi, sp, sr, crit);
 
         gdst.download(cpu_gdst);
-
-        char sss[1024];
-        char warning[300] = "Warning: If the selected device doesn't support double, a deviation will exist.\nIf the accuracy is acceptable, please ignore it.\n";
-        sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
-        strcat(sss, warning);
-        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
-
+        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0);
     }
 }
 
@@ -1397,13 +1302,8 @@ TEST_P(meanShiftProc, Mat)
 
         gdst.download(cpu_gdst);
         gdstCoor.download(cpu_gdstCoor);
-
-        char sss[1024];
-        char warning[300] = "Warning: If the selected device doesn't support double, a deviation will exist.\nIf the accuracy is acceptable, please ignore it.\n";
-        sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d,dstx=%d,dsty=%d\n", roicols, roirows, srcx, srcy, dstx, dsty);
-        strcat(sss, warning);
-        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0, sss);
-        EXPECT_MAT_NEAR(dstCoor, cpu_gdstCoor, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, cpu_gdst, 0.0);
+        EXPECT_MAT_NEAR(dstCoor, cpu_gdstCoor, 0.0);
     }
 }
 
@@ -1442,7 +1342,6 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
     cv::ocl::oclMat gdst_hist;
     //ocl mat with roi
     cv::ocl::oclMat gsrc_roi;
-    //    std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
@@ -1453,10 +1352,6 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
 
         src = randomMat(rng, size, type_src, 0, 256, false);
 
-        //        int devnums = getDevice(oclinfo);
-        //        CV_Assert(devnums > 0);
-        //if you want to use undefault device, set it here
-        //setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -1495,10 +1390,7 @@ TEST_P(calcHist, Mat)
         cv::ocl::calcHist(gsrc_roi, gdst_hist);
 
         gdst_hist.download(cpu_hist);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,srcx=%d,srcy=%d\n", roicols, roirows, srcx, srcy);
-        EXPECT_MAT_NEAR(dst_hist, cpu_hist, 0.0, sss);
+        EXPECT_MAT_NEAR(dst_hist, cpu_hist, 0.0);
     }
 }
 
@@ -1635,11 +1527,7 @@ TEST_P(Convolve, Mat)
 
         cv::Mat cpu_dst;
         gdst_whole.download(cpu_dst);
-
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x=%d,src1y=%d,dstx=%d,dsty=%d,src2x=%d,src2y=%d", roicols, roirows, src1x, src1y, dstx, dsty, src2x, src2y);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 1e-1, sss);
+        EXPECT_MAT_NEAR(dst, cpu_dst, .1);
 
     }
 }

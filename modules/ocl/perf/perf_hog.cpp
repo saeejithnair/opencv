@@ -15,7 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -42,125 +43,120 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "precomp.hpp"
-#include <iomanip>
 
-#ifdef HAVE_OPENCL
-
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
-extern std::string workdir;
-
-#ifndef MWC_TEST_UTILITY
-#define MWC_TEST_UTILITY
-
-// Param class
-#ifndef IMPLEMENT_PARAM_CLASS
-#define IMPLEMENT_PARAM_CLASS(name, type) \
-class name \
-    { \
-    public: \
-    name ( type arg = type ()) : val_(arg) {} \
-    operator type () const {return val_;} \
-    private: \
-    type val_; \
-    }; \
-    inline void PrintTo( name param, std::ostream* os) \
-    { \
-    *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
-    }
-
-#endif // IMPLEMENT_PARAM_CLASS
-#endif // MWC_TEST_UTILITY
-
-IMPLEMENT_PARAM_CLASS(WinSizw48, bool);
-
-PARAM_TEST_CASE(HOG, WinSizw48, bool)
+///////////// HOG////////////////////////
+bool match_rect(cv::Rect r1, cv::Rect r2, int threshold)
 {
-    bool is48;
-    vector<float> detector;
-    virtual void SetUp()
-    {
-        is48 = GET_PARAM(0);
-        if(is48)
-        {
-            detector = cv::ocl::HOGDescriptor::getPeopleDetector48x96();
-        }
-        else
-        {
-            detector = cv::ocl::HOGDescriptor::getPeopleDetector64x128();
-        }
-    }
-};
-
-TEST_P(HOG, Performance)
-{
-    cv::Mat img = readImage(workdir + "lena.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
-
-    // define HOG related arguments
-    float scale = 1.05;
-    //int nlevels = 13;
-    float gr_threshold = 8;
-    float hit_threshold = 1.4;
-    //bool hit_threshold_auto = true;
-
-    int win_width = is48 ? 48 : 64;
-    int win_stride_width = 8;
-    int win_stride_height = 8;
-
-    bool gamma_corr = true;
-
-    Size win_size(win_width, win_width * 2); //(64, 128) or (48, 96)
-    Size win_stride(win_stride_width, win_stride_height);
-
-    cv::ocl::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-                                   cv::ocl::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
-                                   cv::ocl::HOGDescriptor::DEFAULT_NLEVELS);
-
-    gpu_hog.setSVMDetector(detector);
-
-    double totalgputick = 0;
-    double totalgputick_kernel = 0;
-
-    double t1 = 0;
-    double t2 = 0;
-    for(int j = 0; j < LOOP_TIMES + 1; j ++)
-    {
-        t1 = (double)cvGetTickCount();//gpu start1
-
-        ocl::oclMat d_src(img);//upload
-
-        t2 = (double)cvGetTickCount(); //kernel
-
-        vector<Rect> found;
-        gpu_hog.detectMultiScale(d_src, found, hit_threshold, win_stride,
-                                 Size(0, 0), scale, gr_threshold);
-
-        t2 = (double)cvGetTickCount() - t2;//kernel
-
-        // no download time for HOG
-
-        t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if(j == 0)
-            continue;
-
-        totalgputick = t1 + totalgputick;
-
-        totalgputick_kernel = t2 + totalgputick_kernel;
-
-    }
-
-    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+    return ((abs(r1.x - r2.x) < threshold) && (abs(r1.y - r2.y) < threshold) &&
+        (abs(r1.width - r2.width) < threshold) && (abs(r1.height - r2.height) < threshold));
 }
 
+PERFTEST(HOG)
+{
+    Mat src = imread(abspath("road.png"), cv::IMREAD_GRAYSCALE);
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, testing::Combine(testing::Values(WinSizw48(false), WinSizw48(true)), testing::Values(false)));
+    if (src.empty())
+    {
+        throw runtime_error("can't open road.png");
+    }
 
-#endif  //Have opencl
+
+    cv::HOGDescriptor hog;
+    hog.setSVMDetector(hog.getDefaultPeopleDetector());
+    std::vector<cv::Rect> found_locations;
+    std::vector<cv::Rect> d_found_locations;
+
+    SUBTEST << 768 << 'x' << 576 << "; road.png";
+
+    hog.detectMultiScale(src, found_locations);
+
+    CPU_ON;
+    hog.detectMultiScale(src, found_locations);
+    CPU_OFF;
+
+    cv::ocl::HOGDescriptor ocl_hog;
+    ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
+    ocl::oclMat d_src;
+    d_src.upload(src);
+
+    WARMUP_ON;
+    ocl_hog.detectMultiScale(d_src, d_found_locations);
+    WARMUP_OFF;
+    
+    // Ground-truth rectangular people window
+    cv::Rect win1_64x128(231, 190, 72, 144);
+    cv::Rect win2_64x128(621, 156, 97, 194);
+    cv::Rect win1_48x96(238, 198, 63, 126);
+    cv::Rect win2_48x96(619, 161, 92, 185);
+    cv::Rect win3_48x96(488, 136, 56, 112);
+
+    // Compare whether ground-truth windows are detected and compare the number of windows detected.
+    std::vector<int> d_comp(4);
+    std::vector<int> comp(4);
+    for(int i = 0; i < (int)d_comp.size(); i++)
+    {
+        d_comp[i] = 0;
+        comp[i] = 0;
+    }
+
+    int threshold = 10;
+    int val = 32;
+    d_comp[0] = (int)d_found_locations.size();
+    comp[0] = (int)found_locations.size();
+
+    cv::Size winSize = hog.winSize;
+
+    if (winSize == cv::Size(48, 96))
+    {
+        for(int i = 0; i < (int)d_found_locations.size(); i++)
+        {
+            if (match_rect(d_found_locations[i], win1_48x96, threshold))
+                d_comp[1] = val;
+            if (match_rect(d_found_locations[i], win2_48x96, threshold))
+                d_comp[2] = val;
+            if (match_rect(d_found_locations[i], win3_48x96, threshold))
+                d_comp[3] = val;
+        }
+        for(int i = 0; i < (int)found_locations.size(); i++)
+        {
+            if (match_rect(found_locations[i], win1_48x96, threshold))
+                comp[1] = val;
+            if (match_rect(found_locations[i], win2_48x96, threshold))
+                comp[2] = val;
+            if (match_rect(found_locations[i], win3_48x96, threshold))
+                comp[3] = val;
+        }
+    }
+    else if (winSize == cv::Size(64, 128))
+    {
+        for(int i = 0; i < (int)d_found_locations.size(); i++)
+        {
+            if (match_rect(d_found_locations[i], win1_64x128, threshold))
+                d_comp[1] = val;
+            if (match_rect(d_found_locations[i], win2_64x128, threshold))
+                d_comp[2] = val;
+        }
+        for(int i = 0; i < (int)found_locations.size(); i++)
+        {
+            if (match_rect(found_locations[i], win1_64x128, threshold))
+                comp[1] = val;
+            if (match_rect(found_locations[i], win2_64x128, threshold))
+                comp[2] = val;
+        }
+    }
+
+    cv::Mat ocl_mat;
+    ocl_mat = cv::Mat(d_comp);
+    ocl_mat.convertTo(ocl_mat, cv::Mat(comp).type());
+    TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat, cv::Mat(comp), 3));
+
+    GPU_ON;
+    ocl_hog.detectMultiScale(d_src, found_locations);
+    GPU_OFF;
+
+    GPU_FULL_ON;
+    d_src.upload(src);
+    ocl_hog.detectMultiScale(d_src, found_locations);
+    GPU_FULL_OFF;
+}

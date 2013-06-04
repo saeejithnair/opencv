@@ -1,15 +1,15 @@
 #pragma once
 
-#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
+#if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(__ANDROID__)
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/objdetect.hpp>
 
 #include <vector>
 
 namespace cv
 {
-class DetectionBasedTracker
+class CV_EXPORTS DetectionBasedTracker
 {
     public:
         struct Parameters

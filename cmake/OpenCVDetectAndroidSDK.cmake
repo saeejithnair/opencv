@@ -176,10 +176,11 @@ macro(android_get_compatible_target VAR)
 endmacro()
 
 unset(__android_project_chain CACHE)
-#add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
+
+# add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
 macro(add_android_project target path)
   # parse arguments
-  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA)
+  set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA IGNORE_MANIFEST)
   set(__varname "android_proj_")
   foreach(v ${android_proj_arglist})
     set(${__varname}${v} "")
@@ -212,6 +213,16 @@ macro(add_android_project target path)
     ocv_check_dependencies(${android_proj_NATIVE_DEPS} opencv_java)
   endif()
 
+  if(EXISTS "${path}/jni/Android.mk" )
+    # find if native_app_glue is used
+    file(STRINGS "${path}/jni/Android.mk" NATIVE_APP_GLUE REGEX ".*(call import-module,android/native_app_glue)" )
+    if(NATIVE_APP_GLUE)
+      if(ANDROID_NATIVE_API_LEVEL LESS 9 OR NOT EXISTS "${ANDROID_NDK}/sources/android/native_app_glue")
+        set(OCV_DEPENDENCIES_FOUND FALSE)
+      endif()
+    endif()
+  endif()
+
   if(OCV_DEPENDENCIES_FOUND AND android_proj_sdk_target AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13 AND EXISTS "${path}/${ANDROID_MANIFEST_FILE}")
 
     project(${target})
@@ -220,9 +231,13 @@ macro(add_android_project target path)
     # get project sources
     file(GLOB_RECURSE android_proj_files RELATIVE "${path}" "${path}/res/*" "${path}/src/*")
 
+    if(NOT android_proj_IGNORE_MANIFEST)
+      list(APPEND android_proj_files ${ANDROID_MANIFEST_FILE})
+    endif()
+
     # copy sources out from the build tree
     set(android_proj_file_deps "")
-    foreach(f ${android_proj_files} ${ANDROID_MANIFEST_FILE})
+    foreach(f ${android_proj_files})
       add_custom_command(
         OUTPUT "${android_proj_bin_dir}/${f}"
         COMMAND ${CMAKE_COMMAND} -E copy "${path}/${f}" "${android_proj_bin_dir}/${f}"
@@ -260,12 +275,20 @@ macro(add_android_project target path)
     ocv_list_filterout(android_proj_jni_files "\\\\.svn")
 
     if(android_proj_jni_files AND EXISTS ${path}/jni/Android.mk AND NOT DEFINED JNI_LIB_NAME)
+      # find local module name in Android.mk file to build native lib
       file(STRINGS "${path}/jni/Android.mk" JNI_LIB_NAME REGEX "LOCAL_MODULE[ ]*:=[ ]*.*" )
       string(REGEX REPLACE "LOCAL_MODULE[ ]*:=[ ]*([a-zA-Z_][a-zA-Z_0-9]*)[ ]*" "\\1" JNI_LIB_NAME "${JNI_LIB_NAME}")
 
       if(JNI_LIB_NAME)
         ocv_include_modules_recurse(${android_proj_NATIVE_DEPS})
         ocv_include_directories("${path}/jni")
+
+        if (NATIVE_APP_GLUE AND 0)
+          include_directories(${ANDROID_NDK}/sources/android/native_app_glue)
+          list(APPEND android_proj_jni_files ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
+          ocv_warnings_disable(CMAKE_C_FLAGS -Wstrict-prototypes -Wunused-parameter -Wmissing-prototypes)
+          set(android_proj_NATIVE_DEPS ${android_proj_NATIVE_DEPS} android)
+        endif()
 
         add_library(${JNI_LIB_NAME} MODULE ${android_proj_jni_files})
         target_link_libraries(${JNI_LIB_NAME} ${OPENCV_LINKER_LIBS} ${android_proj_NATIVE_DEPS})
@@ -276,9 +299,9 @@ macro(add_android_project target path)
             )
 
         get_target_property(android_proj_jni_location "${JNI_LIB_NAME}" LOCATION)
-    if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
-        add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${android_proj_jni_location}")
-    endif()
+        if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
+            add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${android_proj_jni_location}")
+        endif()
       endif()
     endif()
 
@@ -298,7 +321,7 @@ macro(add_android_project target path)
          COMMAND ${CMAKE_COMMAND} -E touch "${android_proj_bin_dir}/bin/${target}-debug.apk" # needed because ant does not update the timestamp of updated apk
          WORKING_DIRECTORY "${android_proj_bin_dir}"
          MAIN_DEPENDENCY "${android_proj_bin_dir}/${ANDROID_MANIFEST_FILE}"
-         DEPENDS "${OpenCV_BINARY_DIR}/bin/.classes.jar.dephelper" opencv_java # as we are part of OpenCV we can just force this dependency
+         DEPENDS "${OpenCV_BINARY_DIR}/bin/classes.jar.dephelper" opencv_java # as we are part of OpenCV we can just force this dependency
          DEPENDS ${android_proj_file_deps} ${JNI_LIB_NAME})
     endif()
 
@@ -324,6 +347,7 @@ macro(add_android_project target path)
       install(FILES "${OpenCV_BINARY_DIR}/bin/${target}.apk" DESTINATION "samples" COMPONENT main)
       get_filename_component(sample_dir "${path}" NAME)
       #java part
+      list(REMOVE_ITEM android_proj_files ${ANDROID_MANIFEST_FILE})
       foreach(f ${android_proj_files} ${ANDROID_MANIFEST_FILE})
         get_filename_component(install_subdir "${f}" PATH)
         install(FILES "${android_proj_bin_dir}/${f}" DESTINATION "samples/${sample_dir}/${install_subdir}" COMPONENT main)

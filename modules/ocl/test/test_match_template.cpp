@@ -44,7 +44,7 @@
 
 
 #include "precomp.hpp"
-//#define PERF_TEST 0
+
 #ifdef HAVE_OPENCL
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate
@@ -62,7 +62,6 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
     cv::Size templ_size;
     int cn;
     int method;
-    //std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
@@ -70,8 +69,6 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
         templ_size = GET_PARAM(1);
         cn = GET_PARAM(2);
         method = GET_PARAM(3);
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
     }
 };
 
@@ -92,20 +89,10 @@ TEST_P(MatchTemplate8U, Accuracy)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    char sss [100] = "";
-
     cv::Mat mat_dst;
     dst.download(mat_dst);
 
-
-    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
-
-#if PERF_TEST
-    {
-        P_TEST_FULL( {}, {cv::ocl::matchTemplate(ocl_image, ocl_templ, dst, method);}, {});
-        P_TEST_FULL( {}, {cv::matchTemplate(image, templ, dst_gold, method);}, {});
-    }
-#endif // PERF_TEST
+    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1);
 }
 
 PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMethod)
@@ -122,8 +109,6 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMeth
         templ_size = GET_PARAM(1);
         cn = GET_PARAM(2);
         method = GET_PARAM(3);
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
     }
 };
 
@@ -138,37 +123,24 @@ TEST_P(MatchTemplate32F, Accuracy)
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
 
-    char sss [100] = "";
-
     cv::Mat mat_dst;
     dst.download(mat_dst);
 
-    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1, sss);
-
-#if PERF_TEST
-    {
-        std::cout << "Method: " << TEMPLATE_METHOD_NAMES[method] << std::endl;
-        std::cout << "Image Size: (" << size.width << ", " << size.height << ")" << std::endl;
-        std::cout << "Template Size: (" << templ_size.width << ", " << templ_size.height << ")" << std::endl;
-        std::cout << "Channels: " << cn << std::endl;
-        P_TEST_FULL( {}, {cv::ocl::matchTemplate(ocl_image, ocl_templ, dst, method);}, {});
-        P_TEST_FULL( {}, {cv::matchTemplate(image, templ, dst_gold, method);}, {});
-    }
-#endif // PERF_TEST
+    EXPECT_MAT_NEAR(dst_gold, mat_dst, templ_size.area() * 1e-1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate8U,
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MatchTemplate8U,
                         testing::Combine(
                             MTEMP_SIZES,
-                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16))/*, TemplateSize(cv::Size(30, 30))*/),
+                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16)), TemplateSize(cv::Size(30, 30))),
                             testing::Values(Channels(1), Channels(3), Channels(4)),
                             ALL_TEMPLATE_METHODS
                         )
                        );
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate32F, testing::Combine(
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MatchTemplate32F, testing::Combine(
                             MTEMP_SIZES,
-                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16))/*, TemplateSize(cv::Size(30, 30))*/),
+                            testing::Values(TemplateSize(cv::Size(5, 5)), TemplateSize(cv::Size(16, 16)), TemplateSize(cv::Size(30, 30))),
                             testing::Values(Channels(1), Channels(3), Channels(4)),
                             testing::Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))));
 #endif

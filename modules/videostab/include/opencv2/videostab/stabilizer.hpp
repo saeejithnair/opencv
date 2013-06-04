@@ -45,8 +45,8 @@
 
 #include <vector>
 #include <ctime>
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/motion_stabilizing.hpp"
 #include "opencv2/videostab/frame_source.hpp"
@@ -144,7 +144,7 @@ public:
     virtual void reset();
     virtual Mat nextFrame() { return nextStabilizedFrame(); }
 
-private:
+protected:
     virtual void setUp(const Mat &firstFrame);
     virtual Mat estimateMotion();
     virtual Mat estimateStabilizationMotion();
@@ -170,7 +170,7 @@ public:
     virtual void reset();
     virtual Mat nextFrame();
 
-private:
+protected:
     void runPrePassIfNecessary();
 
     virtual void setUp(const Mat &firstFrame);

@@ -10,14 +10,13 @@ add_subdirectory(15-puzzle)
 add_subdirectory(face-detection)
 add_subdirectory(image-manipulations)
 add_subdirectory(color-blob-detection)
+add_subdirectory(tutorial-1-camerapreview)
+add_subdirectory(tutorial-2-mixedprocessing)
+add_subdirectory(tutorial-3-cameracontrol)
 
-add_subdirectory(tutorial-0-androidcamera)
-add_subdirectory(tutorial-1-addopencv)
-add_subdirectory(tutorial-2-opencvcamera)
-add_subdirectory(tutorial-3-native)
-add_subdirectory(tutorial-4-mixed)
+add_subdirectory(native-activity)
 
-#hello-android sample
+# hello-android sample
 if(HAVE_opencv_highgui)
   ocv_include_modules_recurse(opencv_highgui opencv_core)
   add_executable(hello-android hello-android/main.cpp)

@@ -73,6 +73,11 @@
     #pragma warning( disable: 4611 )
 #endif
 
+// the following defines are a hack to avoid multiple problems with frame ponter handling and setjmp
+// see http://gcc.gnu.org/ml/gcc/2011-10/msg00324.html for some details
+#define mingw_getsp(...) 0
+#define __builtin_frame_address(...) 0
+
 namespace cv
 {
 
@@ -324,7 +329,7 @@ void PngEncoder::flushBuf(void*)
 {
 }
 
-bool  PngEncoder::write( const Mat& img, const vector<int>& params )
+bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     png_structp png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
     png_infop info_ptr = 0;

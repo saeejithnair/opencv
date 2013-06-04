@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.opencv.engine"
-    android:versionCode="18"
-    android:versionName="1.8" >
+    android:versionCode="27@ANDROID_PLATFORM_VERSION_CODE@"
+    android:versionName="2.7" >
 
-    <uses-sdk android:minSdkVersion="8" />
+    <uses-sdk android:minSdkVersion="@ANDROID_NATIVE_API_LEVEL@" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
 
     <application
@@ -26,6 +26,5 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
     </activity>
-
-</application>
+    </application>
 </manifest>
