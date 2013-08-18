@@ -747,6 +747,54 @@ class CV_EXPORTS_W TrackerFeatureLBP : public TrackerFeature
 
 };
 
+/************************************ Specific Tracker Classes ************************************/
+
+/**
+ \brief TrackerMIL implementation.
+ For more details see B Babenko, MH Yang, S Belongie, Visual Tracking with Online Multiple Instance Learning
+ */
+
+class CV_EXPORTS_W TrackerMIL : public Tracker
+{
+ public:
+  struct CV_EXPORTS Params
+  {
+    Params();
+    //parameters for sampler
+    float samplerInitInRadius;	// radius for gathering positive instances during init
+    int samplerInitMaxNegNum;  // # negative samples to use during init
+    float samplerSearchWinSize;  // size of search window
+    float samplerTrackInRadius;  // radius for gathering positive instances during tracking
+    int samplerTrackMaxPosNum;	// # positive samples to use during tracking
+    int samplerTrackMaxNegNum;	// # negative samples to use during tracking
+
+    int featureSetNumFeatures;  // #features
+
+    void read( const FileNode& fn );
+    void write( FileStorage& fs ) const;
+  };
+
+  /**
+   * \brief TrackerMIL Constructor
+   * \param parameters        TrackerMIL parameters
+   */
+  TrackerMIL( const TrackerMIL::Params &parameters = TrackerMIL::Params() );
+
+  virtual ~TrackerMIL();
+
+  void read( const FileNode& fn );
+  void write( FileStorage& fs ) const;
+
+ protected:
+
+  bool initImpl( const Mat& image, const Rect& boundingBox );
+  bool updateImpl( const Mat& image, Rect& boundingBox );
+
+  Params params;
+  AlgorithmInfo* info() const;
+
+};
+
 
 } /* namespace cv */
 

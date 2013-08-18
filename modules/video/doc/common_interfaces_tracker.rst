@@ -56,6 +56,9 @@ Creates a tracker by its name.
 
    :param trackerType: Tracker type
    
+The following detector types are supported:
+
+* ``"MIL"`` -- :ocv:class:`TrackerMIL`
 
 Creating Own Tracker
 --------------------

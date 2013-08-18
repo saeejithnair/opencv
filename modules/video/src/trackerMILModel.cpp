@@ -39,62 +39,86 @@
  //
  //M*/
 
-#include "test_precomp.hpp"
-#include "opencv2/video/tracker.hpp"
+#include "trackerMILModel.hpp"
 
-using namespace cv;
-using namespace std;
+/**
+ * TrackerMILModel
+ */
 
-class CV_TrackerBaseTest : public cvtest::BaseTest
+namespace cv
 {
-public:
-	CV_TrackerBaseTest();
-    virtual ~CV_TrackerBaseTest();
 
-};
+TrackerMILModel::TrackerMILModel( const Rect& boundingBox )
+{
+  currentSample.clear();
+  mode = MODE_POSITIVE;
+  width = boundingBox.width;
+  height = boundingBox.height;
 
+  Ptr<TrackerStateEstimatorMILBoosting::TrackerMILTargetState> initState = new TrackerStateEstimatorMILBoosting::TrackerMILTargetState( Point2f( boundingBox.x, boundingBox.y ), boundingBox.width, boundingBox.height,
+                                                                    true, Mat() );
+  trajectory.push_back( initState );
+}
 
-CV_TrackerBaseTest::CV_TrackerBaseTest()
+void TrackerMILModel::responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
+{
+  if( currentSample.empty() )
+  {
+    CV_Error( -1, "The samples in Model estimation are empty" );
+    return;
+  }
+
+  for ( size_t i = 0; i < responses.size(); i++ )
+  {
+    //for each column (one sample) there are #num_feature
+    //get informations from currentSample
+    for ( int j = 0; j < responses.at( i ).cols; j++ )
+    {
+
+      Size currentSize;
+      Point currentOfs;
+      currentSample.at( j ).locateROI( currentSize, currentOfs );
+      bool foreground;
+      if( mode == MODE_POSITIVE || mode == MODE_ESTIMATON )
+      {
+        foreground = true;
+      }
+      else if( mode == MODE_NEGATIVE )
+      {
+        foreground = false;
+      }
+
+      //get the column of the HAAR responses
+      Mat singleResponse = responses.at( i ).col( j );
+
+      //create the state
+      Ptr<TrackerStateEstimatorMILBoosting::TrackerMILTargetState> currentState = new TrackerStateEstimatorMILBoosting::TrackerMILTargetState(
+          currentOfs, width, height, foreground, singleResponse );
+
+      confidenceMap.push_back( std::make_pair( currentState, 0 ) );
+
+    }
+
+  }
+}
+
+void TrackerMILModel::modelEstimationImpl( const std::vector<Mat>& responses )
+{
+  responseToConfidenceMap( responses, currentConfidenceMap );
+
+}
+
+void TrackerMILModel::modelUpdateImpl()
 {
 
 }
 
-
-CV_TrackerBaseTest::~CV_TrackerBaseTest()
+void TrackerMILModel::setMode( int trainingMode, const std::vector<Mat>& samples )
 {
+  currentSample.clear();
+  currentSample = samples;
 
+  mode = trainingMode;
 }
 
-
-
-/************************************ TrackerMIL ************************************/
-
-class CV_TrackerMILTest : public CV_TrackerBaseTest
-{
-public:
-	CV_TrackerMILTest();
-	~CV_TrackerMILTest();
-
-protected:
-	void run( int );
-};
-
-CV_TrackerMILTest::CV_TrackerMILTest()
-{
 }
-
-CV_TrackerMILTest::~CV_TrackerMILTest()
-{
-}
-
-void CV_TrackerMILTest::run( int )
-{
-	ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
-	ts->printf( cvtest::TS::LOG, "CV_TrackerMILTest to be implemented" );
-}
-
-
-
-TEST(Video_TrackerMIL, accuracy) { CV_TrackerMILTest test; test.safe_run(); }
-
-/* End of file. */
