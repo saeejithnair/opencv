@@ -39,61 +39,68 @@
  //
  //M*/
 
-#include "test_precomp.hpp"
-#include "opencv2/video/tracker.hpp"
+#include "precomp.hpp"
 
-using namespace cv;
-using namespace std;
-
-class CV_TrackerBaseTest : public cvtest::BaseTest
+namespace cv
 {
-public:
-	CV_TrackerBaseTest();
-    virtual ~CV_TrackerBaseTest();
 
-};
+/*
+ *  TrackerBoosting
+ */
 
-
-CV_TrackerBaseTest::CV_TrackerBaseTest()
+/*
+ * Parameters
+ */
+TrackerBoosting::Params::Params()
 {
 
 }
 
-
-CV_TrackerBaseTest::~CV_TrackerBaseTest()
+void TrackerBoosting::Params::read( const cv::FileNode& fn )
 {
 
 }
 
-
-
-/************************************ TrackerBoosting ************************************/
-
-class CV_TrackerBoostingTest : public CV_TrackerBaseTest
+void TrackerBoosting::Params::write( cv::FileStorage& fs ) const
 {
-public:
-	CV_TrackerBoostingTest();
-	~CV_TrackerBoostingTest();
 
-protected:
-	void run( int );
-};
-
-CV_TrackerBoostingTest::CV_TrackerBoostingTest()
-{
 }
 
-CV_TrackerBoostingTest::~CV_TrackerBoostingTest()
+/*
+ * Constructor
+ */
+TrackerBoosting::TrackerBoosting( const TrackerBoosting::Params &parameters ) :
+    params( parameters )
 {
+  initialized = false;
 }
 
-void CV_TrackerBoostingTest::run( int )
+/*
+ * Destructor
+ */
+TrackerBoosting::~TrackerBoosting()
 {
-	ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
-	ts->printf( cvtest::TS::LOG, "CV_TrackerBoostingTest to be implemented" );
+
 }
 
+void TrackerBoosting::read( const cv::FileNode& fn )
+{
+  params.read( fn );
+}
 
-TEST(Video_TrackerBoosting, accuracy) { CV_TrackerBoostingTest test; test.safe_run(); }
+void TrackerBoosting::write( cv::FileStorage& fs ) const
+{
+  params.write( fs );
+}
 
-/* End of file. */
+bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
+{
+  return false;
+}
+
+bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
+{
+  return false;
+}
+
+} /* namespace cv */
