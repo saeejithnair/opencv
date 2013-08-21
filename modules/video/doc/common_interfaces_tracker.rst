@@ -55,7 +55,10 @@ Creates a tracker by its name.
 .. ocv:function::  static Ptr<Tracker> Tracker::create( const String& trackerType )
 
    :param trackerType: Tracker type
+   
+The following detector types are supported:
 
+* ``"MIL"`` -- :ocv:class:`TrackerMIL`
 
 Creating Own Tracker
 --------------------

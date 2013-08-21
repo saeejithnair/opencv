@@ -39,60 +39,65 @@
  //
  //M*/
 
-#include "test_precomp.hpp"
-#include "opencv2/video/tracker.hpp"
+#ifndef __OPENCV_TRACKER_MIL_MODEL_HPP__
+#define __OPENCV_TRACKER_MIL_MODEL_HPP__
 
-using namespace cv;
-using namespace std;
+#include "opencv2/core.hpp"
 
-class CV_TrackerBaseTest : public cvtest::BaseTest
+namespace cv
+{
+
+/**
+ * \brief Implementation of TrackerModel for MIL algorithm
+ */
+class TrackerMILModel : public TrackerModel
 {
  public:
-  CV_TrackerBaseTest();
-  virtual ~CV_TrackerBaseTest();
+  enum
+  {
+    MODE_POSITIVE = 1,  	// mode for positive features
+    MODE_NEGATIVE = 2,  	// mode for negative features
+    MODE_ESTIMATON = 3	// mode for estimation step
+  };
 
-};
+  /**
+   * \brief Constructor
+   * \param boundingBox The first boundingBox
+   */
+  TrackerMILModel( const Rect& boundingBox );
 
-CV_TrackerBaseTest::CV_TrackerBaseTest()
-{
+  /**
+   * \brief Destructor
+   */
+  ~TrackerMILModel()
+  {
+  }
+  ;
 
-}
+  /**
+   * \brief Set the mode
+   */
+  void setMode( int trainingMode, const std::vector<Mat>& samples );
 
-CV_TrackerBaseTest::~CV_TrackerBaseTest()
-{
-
-}
-
-/************************************ TrackerMIL ************************************/
-
-class CV_TrackerMILTest : public CV_TrackerBaseTest
-{
- public:
-  CV_TrackerMILTest();
-  ~CV_TrackerMILTest();
+  /**
+   * \brief Create the ConfidenceMap from a list of responses
+   * \param responses The list of the responses
+   * \param confidenceMap The output
+   */
+  void responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap );
 
  protected:
-  void run( int );
+  void modelEstimationImpl( const std::vector<Mat>& responses );
+  void modelUpdateImpl();
+
+ private:
+  int mode;
+  std::vector<Mat> currentSample;
+
+  int width;	//initial width of the boundingBox
+  int height;  //initial height of the boundingBox
 };
 
-CV_TrackerMILTest::CV_TrackerMILTest()
-{
-}
+} /* namespace cv */
 
-CV_TrackerMILTest::~CV_TrackerMILTest()
-{
-}
-
-void CV_TrackerMILTest::run( int )
-{
-  ts->set_failed_test_info( cvtest::TS::FAIL_GENERIC );
-  ts->printf( cvtest::TS::LOG, "CV_TrackerMILTest to be implemented" );
-}
-
-TEST(Video_TrackerMIL, accuracy)
-{
-  CV_TrackerMILTest test;
-  test.safe_run();
-}
-
-/* End of file. */
+#endif
