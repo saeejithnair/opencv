@@ -54,17 +54,23 @@ namespace cv
  */
 TrackerBoosting::Params::Params()
 {
-
+  numClassifiers = 100;
+  featureSetOverlap = 0.99f;
+  featureSetSearchFactor = 2;
 }
 
 void TrackerBoosting::Params::read( const cv::FileNode& fn )
 {
-
+  numClassifiers = fn["numClassifiers"];
+  featureSetOverlap = fn["overlap"];
+  featureSetSearchFactor = fn["searchFactor"];
 }
 
 void TrackerBoosting::Params::write( cv::FileStorage& fs ) const
 {
-
+  fs << "numClassifiers" << numClassifiers;
+  fs << "overlap" << featureSetOverlap;
+  fs << "searchFactor" << featureSetSearchFactor;
 }
 
 /*
@@ -94,11 +100,12 @@ void TrackerBoosting::write( cv::FileStorage& fs ) const
   params.write( fs );
 }
 
-bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
+bool TrackerBoosting::initImpl( const Mat& /*image*/, const Rect& boundingBox )
 {
   //sampler
   if( !sampler->addTrackerSamplerAlgorithm( "CS" ) )
     return false;
+  //TODO compute samples
 
   //featureSet
   if( !featureSet->addTrackerFeature( "HAAR" ) )
@@ -112,7 +119,7 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   return true;
 }
 
-bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
+bool TrackerBoosting::updateImpl( const Mat& /*image*/, Rect& /*boundingBox*/ )
 {
   return false;
 }

@@ -209,9 +209,22 @@ std::vector<Mat> TrackerSamplerCSC::sampleImage( const Mat& img, int x, int y, i
 /**
  * TrackerSamplerCS
  */
-TrackerSamplerCS::TrackerSamplerCS()
+TrackerSamplerCS::Params::Params()
+{
+  overlap = 0.99f;
+  searchFactor = 2;
+}
+
+TrackerSamplerCS::TrackerSamplerCS( const TrackerSamplerCS::Params &parameters ) :
+    params( parameters )
 {
   className = "CS";
+  mode = MODE_INIT;
+}
+
+void TrackerSamplerCS::setMode( int samplingMode )
+{
+  mode = samplingMode;
 }
 
 TrackerSamplerCS::~TrackerSamplerCS()
@@ -219,9 +232,50 @@ TrackerSamplerCS::~TrackerSamplerCS()
 
 }
 
-bool TrackerSamplerCS::samplingImpl( const Mat& /*image*/, Rect /*boundingBox*/, std::vector<Mat>& /*sample*/)
+bool TrackerSamplerCS::samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample )
 {
-  return false;
+  if( mode == MODE_INIT )
+  {
+    trackedPatch = boundingBox;
+    Size imageSize( image.cols, image.rows );
+    validROI = Rect( 0, 0, imageSize.width, imageSize.height );
+  }
+
+  Size trackedPatchSize(trackedPatch.width, trackedPatch.height);
+  Rect trackingROI = getTrackingROI( params.searchFactor );
+
+  sample = patchesRegularScan( trackingROI, trackedPatchSize );
+
+  return true;
+}
+
+Rect TrackerSamplerCS::getTrackingROI( float searchFactor )
+{
+  Rect searchRegion;
+
+  searchRegion = RectMultiply( trackedPatch, searchFactor );
+  //check
+  if( searchRegion.y + searchRegion.height > validROI.height )
+    searchRegion.height = validROI.height - searchRegion.y;
+  if( searchRegion.x + searchRegion.width > validROI.width )
+    searchRegion.width = validROI.width - searchRegion.x;
+
+  return searchRegion;
+}
+
+Rect TrackerSamplerCS::RectMultiply( const Rect & rect, float f )
+{
+  cv::Rect r_tmp;
+  r_tmp.y = (int) ( rect.y - ( (float) rect.height * f - rect.height ) / 2 );
+  if( r_tmp.y < 0 )
+    r_tmp.y = 0;
+  r_tmp.x = (int) ( rect.x - ( (float) rect.width * f - rect.width ) / 2 );
+  if( r_tmp.x < 0 )
+    r_tmp.x = 0;
+  r_tmp.height = (int) ( rect.height * f );
+  r_tmp.width = (int) ( rect.width * f );
+
+  return r_tmp;
 }
 
 } /* namespace cv */

@@ -675,12 +675,38 @@ class CV_EXPORTS_W TrackerSamplerCSC : public TrackerSamplerAlgorithm
 class CV_EXPORTS_W TrackerSamplerCS : public TrackerSamplerAlgorithm
 {
  public:
+  enum
+  {
+    MODE_INIT = 1,  // mode for init samples
+    MODE_TRACK = 2  // mode for update samples
+  };
 
-  TrackerSamplerCS();
+  struct CV_EXPORTS Params
+  {
+    Params();
+    float overlap;
+    float searchFactor;
+  };
+  TrackerSamplerCS( const TrackerSamplerCS::Params &parameters = TrackerSamplerCS::Params() );
+
+  /**
+   * \brief set the sampling mode
+   */
+  void setMode( int samplingMode );
 
   ~TrackerSamplerCS();
 
   bool samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
+
+ private:
+  Rect getTrackingROI( float searchFactor );
+  Rect RectMultiply( const Rect & rect, float f );
+  std::vector<Mat>& patchesRegularScan( Rect trackingROI, Size trackedPatchSize );
+
+  Params params;
+  int mode;
+  Rect trackedPatch;
+  Rect validROI;
 
 };
 
@@ -793,7 +819,9 @@ class CV_EXPORTS_W TrackerBoosting : public Tracker
   struct CV_EXPORTS Params
   {
     Params();
-
+    int numClassifiers;  //the number of classifiers to use in a OnlineBoosting algorithm
+    float featureSetOverlap;  //search region parameters to use in a OnlineBoosting algorithm
+    float featureSetSearchFactor;  // search region parameters to use in a OnlineBoosting algorithm
     /**
      * \brief Read parameters from file
      */
