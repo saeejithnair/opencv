@@ -39,82 +39,35 @@
  //
  //M*/
 
-#include "precomp.hpp"
 #include "trackerBoostingModel.hpp"
+
+/**
+ * TrackerBoostingModel
+ */
 
 namespace cv
 {
 
-/*
- *  TrackerBoosting
- */
+TrackerBoostingModel::TrackerBoostingModel( const Rect& boundingBox )
+{
 
-/*
- * Parameters
- */
-TrackerBoosting::Params::Params()
+  width = boundingBox.width;
+  height = boundingBox.height;
+
+  Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> initState =
+      new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState( Point2f( boundingBox.x, boundingBox.y ), boundingBox.width,
+                                                                           boundingBox.height );
+  trajectory.push_back( initState );
+}
+
+void TrackerBoostingModel::modelEstimationImpl( const std::vector<Mat>& responses )
 {
 
 }
 
-void TrackerBoosting::Params::read( const cv::FileNode& fn )
+void TrackerBoostingModel::modelUpdateImpl()
 {
 
 }
 
-void TrackerBoosting::Params::write( cv::FileStorage& fs ) const
-{
-
 }
-
-/*
- * Constructor
- */
-TrackerBoosting::TrackerBoosting( const TrackerBoosting::Params &parameters ) :
-    params( parameters )
-{
-  initialized = false;
-}
-
-/*
- * Destructor
- */
-TrackerBoosting::~TrackerBoosting()
-{
-
-}
-
-void TrackerBoosting::read( const cv::FileNode& fn )
-{
-  params.read( fn );
-}
-
-void TrackerBoosting::write( cv::FileStorage& fs ) const
-{
-  params.write( fs );
-}
-
-bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
-{
-  //sampler
-  if( !sampler->addTrackerSamplerAlgorithm( "CS" ) )
-    return false;
-
-  //featureSet
-  if( !featureSet->addTrackerFeature( "HAAR" ) )
-    return false;
-
-  //model
-  model = new TrackerBoostingModel( boundingBox );
-  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting();
-  model->setTrackerStateEstimator( stateEstimator );
-
-  return true;
-}
-
-bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
-{
-  return false;
-}
-
-} /* namespace cv */

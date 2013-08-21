@@ -39,82 +39,46 @@
  //
  //M*/
 
-#include "precomp.hpp"
-#include "trackerBoostingModel.hpp"
+#ifndef __OPENCV_TRACKER_BOOSTING_MODEL_HPP__
+#define __OPENCV_TRACKER_BOOSTING_MODEL_HPP__
+
+#include "opencv2/core.hpp"
 
 namespace cv
 {
 
-/*
- *  TrackerBoosting
+/**
+ * \brief Implementation of TrackerModel for BOOSTING algorithm
  */
-
-/*
- * Parameters
- */
-TrackerBoosting::Params::Params()
+class TrackerBoostingModel : public TrackerModel
 {
+ public:
 
-}
+  /**
+   * \brief Constructor
+   * \param boundingBox The first boundingBox
+   */
+  TrackerBoostingModel( const Rect& boundingBox );
 
-void TrackerBoosting::Params::read( const cv::FileNode& fn )
-{
+  /**
+   * \brief Destructor
+   */
+  ~TrackerBoostingModel()
+  {
+  }
+  ;
 
-}
 
-void TrackerBoosting::Params::write( cv::FileStorage& fs ) const
-{
+ protected:
+  void modelEstimationImpl( const std::vector<Mat>& responses );
+  void modelUpdateImpl();
 
-}
+ private:
 
-/*
- * Constructor
- */
-TrackerBoosting::TrackerBoosting( const TrackerBoosting::Params &parameters ) :
-    params( parameters )
-{
-  initialized = false;
-}
-
-/*
- * Destructor
- */
-TrackerBoosting::~TrackerBoosting()
-{
-
-}
-
-void TrackerBoosting::read( const cv::FileNode& fn )
-{
-  params.read( fn );
-}
-
-void TrackerBoosting::write( cv::FileStorage& fs ) const
-{
-  params.write( fs );
-}
-
-bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
-{
-  //sampler
-  if( !sampler->addTrackerSamplerAlgorithm( "CS" ) )
-    return false;
-
-  //featureSet
-  if( !featureSet->addTrackerFeature( "HAAR" ) )
-    return false;
-
-  //model
-  model = new TrackerBoostingModel( boundingBox );
-  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting();
-  model->setTrackerStateEstimator( stateEstimator );
-
-  return true;
-}
-
-bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
-{
-  return false;
-}
+  int width;  //initial width of the boundingBox
+  int height;  //initial height of the boundingBox
+};
 
 } /* namespace cv */
+
+#endif

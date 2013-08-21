@@ -242,6 +242,39 @@ void TrackerStateEstimatorMILBoosting::updateImpl( std::vector<ConfidenceMap>& c
 }
 
 /**
+ * TrackerAdaBoostingTargetState::TrackerAdaBoostingTargetState
+ */
+TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::TrackerAdaBoostingTargetState( const Point2f& position, int width, int height )
+{
+  setTargetPosition( position );
+  setTargetWidth( width );
+  setTargetHeight( height );
+}
+
+/**
+ * TrackerStateEstimatorBoosting
+ */
+TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting()
+{
+  className = "ADABOOSTING";
+}
+
+TrackerStateEstimatorAdaBoosting::~TrackerStateEstimatorAdaBoosting()
+{
+
+}
+
+Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
+{
+  return confidenceMaps.back().back().first;
+}
+
+void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/)
+{
+
+}
+
+/**
  * TrackerStateEstimatorSVM
  */
 TrackerStateEstimatorSVM::TrackerStateEstimatorSVM()

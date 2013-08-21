@@ -571,6 +571,41 @@ class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimat
 };
 
 /**
+ * \brief TrackerStateEstimator based on AdaBoosting
+ */
+class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimator
+{
+ public:
+  class TrackerAdaBoostingTargetState : public TrackerTargetState
+  {
+
+   public:
+    /**
+     * \brief Constructor
+     * \param position Top left corner of the bounding box
+     * \param width Width of the bounding box
+     * \param height Height of the bounding box
+     */
+    TrackerAdaBoostingTargetState( const Point2f& position, int width, int height );
+
+    /**
+     * \brief Destructor
+     */
+    ~TrackerAdaBoostingTargetState()
+    {
+    }
+    ;
+  };
+
+  TrackerStateEstimatorAdaBoosting();
+  ~TrackerStateEstimatorAdaBoosting();
+
+ protected:
+  Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
+  void updateImpl( std::vector<ConfidenceMap>& confidenceMaps );
+};
+
+/**
  * \brief TrackerStateEstimator based on SVM
  */
 class CV_EXPORTS_W TrackerStateEstimatorSVM : public TrackerStateEstimator
