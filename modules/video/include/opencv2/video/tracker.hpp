@@ -746,6 +746,49 @@ class CV_EXPORTS_W TrackerFeatureLBP : public TrackerFeature
 
 };
 
+/************************************ Specific Tracker Classes ************************************/
+
+/**
+ \brief TrackerBoosting implementation.
+ For more details see H Grabner, M Grabner, H Bischof, Real-time tracking via on-line boosting
+ */
+class CV_EXPORTS_W TrackerBoosting : public Tracker
+{
+ public:
+  struct CV_EXPORTS Params
+  {
+    Params();
+
+    /**
+     * \brief Read parameters from file
+     */
+    void read( const FileNode& fn );
+
+    /**
+     * \brief Write parameters in a file
+     */
+    void write( FileStorage& fs ) const;
+  };
+
+  /**
+   * \brief TrackerBoosting Constructor
+   * \param parameters        TrackerBoosting parameters
+   */
+  TrackerBoosting( const TrackerBoosting::Params &parameters = TrackerBoosting::Params() );
+
+  virtual ~TrackerBoosting();
+
+  void read( const FileNode& fn );
+  void write( FileStorage& fs ) const;
+
+ protected:
+
+  bool initImpl( const Mat& image, const Rect& boundingBox );
+  bool updateImpl( const Mat& image, Rect& boundingBox );
+
+  Params params;
+  AlgorithmInfo* info() const;
+};
 
 } /* namespace cv */
 

@@ -51,5 +51,6 @@ bool initModule_video(void)
     return true;
 }
 
+CV_INIT_ALGORITHM(TrackerBoosting, "TRACKER.BOOSTING", 0);
 
 }
