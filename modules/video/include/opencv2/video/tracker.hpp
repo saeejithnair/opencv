@@ -822,8 +822,9 @@ class CV_EXPORTS_W TrackerBoosting : public Tracker
   {
     Params();
     int numClassifiers;  //the number of classifiers to use in a OnlineBoosting algorithm
-    float featureSetOverlap;  //search region parameters to use in a OnlineBoosting algorithm
-    float featureSetSearchFactor;  // search region parameters to use in a OnlineBoosting algorithm
+    float samplerOverlap;  //search region parameters to use in a OnlineBoosting algorithm
+    float samplerSearchFactor;  // search region parameters to use in a OnlineBoosting algorithm
+    int featureSetNumFeatures;  // #features
     /**
      * \brief Read parameters from file
      */

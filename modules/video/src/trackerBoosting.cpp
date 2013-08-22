@@ -55,22 +55,23 @@ namespace cv
 TrackerBoosting::Params::Params()
 {
   numClassifiers = 100;
-  featureSetOverlap = 0.99f;
-  featureSetSearchFactor = 2;
+  samplerOverlap = 0.99f;
+  samplerSearchFactor = 2;
+  featureSetNumFeatures = 250;
 }
 
 void TrackerBoosting::Params::read( const cv::FileNode& fn )
 {
   numClassifiers = fn["numClassifiers"];
-  featureSetOverlap = fn["overlap"];
-  featureSetSearchFactor = fn["searchFactor"];
+  samplerOverlap = fn["overlap"];
+  samplerSearchFactor = fn["searchFactor"];
 }
 
 void TrackerBoosting::Params::write( cv::FileStorage& fs ) const
 {
   fs << "numClassifiers" << numClassifiers;
-  fs << "overlap" << featureSetOverlap;
-  fs << "searchFactor" << featureSetSearchFactor;
+  fs << "overlap" << samplerOverlap;
+  fs << "searchFactor" << samplerSearchFactor;
 }
 
 /*
@@ -103,19 +104,32 @@ void TrackerBoosting::write( cv::FileStorage& fs ) const
 bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 {
   //sampling
-  if( !sampler->addTrackerSamplerAlgorithm( "CS" ) )
+  TrackerSamplerCS::Params CSparameters;
+  CSparameters.overlap = params.samplerOverlap;
+  CSparameters.searchFactor = params.samplerSearchFactor;
+
+  Ptr<TrackerSamplerAlgorithm> CSSampler = new TrackerSamplerCS( CSparameters );
+
+  if( !sampler->addTrackerSamplerAlgorithm( CSSampler ) )
     return false;
 
+  Ptr<TrackerSamplerCS>( CSSampler )->setMode( TrackerSamplerCS::MODE_INIT );
   sampler->sampling( image, boundingBox );
   std::vector<Mat> samples = sampler->getSamples();
 
   if( samples.empty() )
-      return false;
-
-  //TODO compute HAAR features
-  if( !featureSet->addTrackerFeature( "HAAR" ) )
     return false;
-  //featureSet->extraction( samples );
+
+  //compute HAAR features
+  TrackerFeatureHAAR::Params HAARparameters;
+  HAARparameters.numFeatures = params.featureSetNumFeatures;
+  HAARparameters.rectSize = Size( boundingBox.width, boundingBox.height );
+  Ptr<TrackerFeature> trackerFeature = new TrackerFeatureHAAR( HAARparameters );
+
+  if( !featureSet->addTrackerFeature( trackerFeature ) )
+    return false;
+  featureSet->extraction( samples );
+  const std::vector<Mat> response = featureSet->getResponses();
 
   //Model
   model = new TrackerBoostingModel( boundingBox );
@@ -123,6 +137,8 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   model->setTrackerStateEstimator( stateEstimator );
 
   //TODO Run model estimation and update
+  model->modelEstimation( response );
+  model->modelUpdate();
   return true;
 }
 
