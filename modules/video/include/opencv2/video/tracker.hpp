@@ -701,12 +701,14 @@ class CV_EXPORTS_W TrackerSamplerCS : public TrackerSamplerAlgorithm
  private:
   Rect getTrackingROI( float searchFactor );
   Rect RectMultiply( const Rect & rect, float f );
-  std::vector<Mat>& patchesRegularScan( Rect trackingROI, Size trackedPatchSize );
+  std::vector<Mat>  patchesRegularScan( const Mat& image, Rect trackingROI, Size patchSize );
+  void setCheckedROI( Rect imageROI );
 
   Params params;
   int mode;
   Rect trackedPatch;
   Rect validROI;
+  Rect ROI;
 
 };
 

@@ -100,26 +100,33 @@ void TrackerBoosting::write( cv::FileStorage& fs ) const
   params.write( fs );
 }
 
-bool TrackerBoosting::initImpl( const Mat& /*image*/, const Rect& boundingBox )
+bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 {
-  //sampler
+  //sampling
   if( !sampler->addTrackerSamplerAlgorithm( "CS" ) )
     return false;
-  //TODO compute samples
 
-  //featureSet
+  sampler->sampling( image, boundingBox );
+  std::vector<Mat> samples = sampler->getSamples();
+
+  if( samples.empty() )
+      return false;
+
+  //TODO compute HAAR features
   if( !featureSet->addTrackerFeature( "HAAR" ) )
     return false;
+  //featureSet->extraction( samples );
 
-  //model
+  //Model
   model = new TrackerBoostingModel( boundingBox );
   Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting();
   model->setTrackerStateEstimator( stateEstimator );
 
+  //TODO Run model estimation and update
   return true;
 }
 
-bool TrackerBoosting::updateImpl( const Mat& /*image*/, Rect& /*boundingBox*/ )
+bool TrackerBoosting::updateImpl( const Mat& /*image*/, Rect& /*boundingBox*/)
 {
   return false;
 }
