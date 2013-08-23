@@ -133,7 +133,8 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 
   //Model
   model = new TrackerBoostingModel( boundingBox );
-  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting();
+  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting( params.numClassifiers,
+                                                                                               Size( boundingBox.width, boundingBox.height ) );
   model->setTrackerStateEstimator( stateEstimator );
 
   //TODO Run model estimation and update

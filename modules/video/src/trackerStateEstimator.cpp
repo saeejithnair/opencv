@@ -254,9 +254,12 @@ TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::TrackerAdaBoost
 /**
  * TrackerStateEstimatorBoosting
  */
-TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting()
+TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClassifer, Size patchSize )
 {
   className = "ADABOOSTING";
+  numBaseClassifier = numClassifer;
+  initPatchSize = patchSize;
+  trained = false;
 }
 
 TrackerStateEstimatorAdaBoosting::~TrackerStateEstimatorAdaBoosting()
@@ -271,6 +274,15 @@ Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const st
 
 void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/)
 {
+  if( !trained )
+  {
+    //this is the first time that the classifier is built
+    int numWeakClassifier = numBaseClassifier * 10;
+    bool useFeatureExchange = true;
+    int iterationInit = 50;
+    boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, useFeatureExchange, iterationInit );
+    trained = true;
+  }
 
 }
 

@@ -45,6 +45,7 @@
 #include "opencv2/core.hpp"
 #include "feature.hpp"
 #include "onlineMIL.hpp"
+#include "onlineBoosting.hpp"
 #include <iostream>
 
 /*
@@ -597,12 +598,19 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
     ;
   };
 
-  TrackerStateEstimatorAdaBoosting();
+  TrackerStateEstimatorAdaBoosting( int numClassifer, Size patchSize );
   ~TrackerStateEstimatorAdaBoosting();
 
  protected:
   Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
   void updateImpl( std::vector<ConfidenceMap>& confidenceMaps );
+
+  Ptr<StrongClassifierDirectSelection> boostClassifier;
+
+ private:
+  int numBaseClassifier;
+  bool trained;
+  Size initPatchSize;
 };
 
 /**

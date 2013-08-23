@@ -42,9 +42,129 @@
 #include "precomp.hpp"
 #include "opencv2/video/onlineBoosting.hpp"
 
-
 namespace cv
 {
 
+StrongClassifierDirectSelection::StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, bool useFeatureEx, int iterationInit )
+{
+  //StrongClassifier
+  numBaseClassifier = numBaseClf;
+  numAllWeakClassifier = numWeakClf + iterationInit;
+
+  alpha.assign( numBaseClf, 0 );
+
+  patchSize = patchSz;
+  useFeatureExchange = useFeatureEx;
+
+  //StrongClassifierDirectSelection
+  baseClassifier = new BaseClassifier*[numBaseClassifier];
+  baseClassifier[0] = new BaseClassifier( numWeakClf, iterationInit, patchSize );
+
+  for ( int curBaseClassifier = 1; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
+    baseClassifier[curBaseClassifier] = new BaseClassifier( numWeakClf, iterationInit, baseClassifier[0]->getReferenceWeakClassifier() );
+
+  m_errorMask = new bool[numAllWeakClassifier];
+  m_errors.resize( numAllWeakClassifier );
+  m_sumErrors.resize( numAllWeakClassifier );
+}
+
+StrongClassifierDirectSelection::~StrongClassifierDirectSelection()
+{
+  for ( int curBaseClassifier = 0; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
+    delete baseClassifier[curBaseClassifier];
+  delete[] baseClassifier;
+  alpha.clear();
+}
+
+bool StrongClassifierDirectSelection::update( Mat response, Rect ROI, int target, float importance )
+{
+  memset( m_errorMask, 0, numAllWeakClassifier * sizeof(bool) );
+  m_errors.assign( numAllWeakClassifier, 0 );
+  m_sumErrors.assign( numAllWeakClassifier, 0 );
+
+  baseClassifier[0]->trainClassifier( response, ROI, target, importance, m_errorMask );
+  for ( int curBaseClassifier = 0; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
+  {
+    int selectedClassifier = baseClassifier[curBaseClassifier]->selectBestClassifier( m_errorMask, importance, m_errors );
+
+    if( m_errors[selectedClassifier] >= 0.5 )
+      alpha[curBaseClassifier] = 0;
+    else
+      alpha[curBaseClassifier] = logf( ( 1.0f - m_errors[selectedClassifier] ) / m_errors[selectedClassifier] );
+
+    if( m_errorMask[selectedClassifier] )
+      importance *= (float) sqrt( ( 1.0f - m_errors[selectedClassifier] ) / m_errors[selectedClassifier] );
+    else
+      importance *= (float) sqrt( m_errors[selectedClassifier] / ( 1.0f - m_errors[selectedClassifier] ) );
+
+    //weight limitation
+    //if (importance > 100) importance = 100;
+
+    //sum up errors
+    for ( int curWeakClassifier = 0; curWeakClassifier < numAllWeakClassifier; curWeakClassifier++ )
+    {
+      if( m_errors[curWeakClassifier] != FLT_MAX && m_sumErrors[curWeakClassifier] >= 0 )
+        m_sumErrors[curWeakClassifier] += m_errors[curWeakClassifier];
+    }
+
+    //mark feature as used
+    m_sumErrors[selectedClassifier] = -1;
+    m_errors[selectedClassifier] = FLT_MAX;
+  }
+
+  if( useFeatureExchange )
+  {
+    int replacedClassifier = baseClassifier[0]->replaceWeakestClassifier( m_sumErrors, patchSize );
+    if( replacedClassifier > 0 )
+      for ( int curBaseClassifier = 1; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
+        baseClassifier[curBaseClassifier]->replaceClassifierStatistic( baseClassifier[0]->getIdxOfNewWeakClassifier(), replacedClassifier );
+  }
+
+  return true;
+}
+
+BaseClassifier::BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize )
+{
+
+}
+
+BaseClassifier::BaseClassifier( int numWeakClassifier, int iterationInit, WeakClassifier** weakClassifier )
+{
+
+}
+
+void BaseClassifier::trainClassifier( Mat response, Rect ROI, int target, float importance, bool* errorMask )
+{
+
+}
+
+int BaseClassifier::selectBestClassifier( bool* errorMask, float importance, std::vector<float> & errors )
+{
+  return 0;
+}
+
+int BaseClassifier::replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize )
+{
+  return 0;
+}
+void BaseClassifier::replaceClassifierStatistic( int sourceIndex, int targetIndex )
+{
+
+}
+
+WeakClassifier** BaseClassifier::getReferenceWeakClassifier()
+{
+  return weakClassifier;
+}
+
+int BaseClassifier::getIdxOfNewWeakClassifier()
+{
+  return m_idxOfNewWeakClassifier;
+}
+
+BaseClassifier::~BaseClassifier()
+{
+
+}
 
 } /* namespace cv */
