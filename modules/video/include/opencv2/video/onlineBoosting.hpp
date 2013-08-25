@@ -51,6 +51,8 @@ namespace cv
 
 class BaseClassifier;
 class WeakClassifier;
+class EstimatedGaussDistribution;
+class ClassifierThreshold;
 
 class StrongClassifierDirectSelection
 {
@@ -109,28 +111,115 @@ class BaseClassifier
 
 };
 
-class WeakClassifier
+class WeakClassifierHaarFeature
 {
 
  public:
-
-  WeakClassifier();
+  WeakClassifierHaarFeature( Size patchSize );
   virtual
-  ~WeakClassifier();
+  ~WeakClassifierHaarFeature();
 
-  virtual bool
-  update( Mat image, Rect ROI, int target );
+  bool update( Mat response, Rect ROI, int target );
+  int eval( Mat response, Rect ROI );
+  float getValue( Mat response, Rect ROI );
+  int getType();
+  EstimatedGaussDistribution* getPosDistribution();
+  EstimatedGaussDistribution* getNegDistribution();
+  void resetPosDist();
+  void initPosDist();
 
-  virtual int
-  eval( Mat image, Rect ROI );
-
-  virtual float
-  getValue( Mat image, Rect ROI );
-
-  virtual int
-  getType();
+ private:
+  float m_feature;
+  ClassifierThreshold* m_classifier;
+  void generateRandomClassifier();
 
 };
+
+class Detector
+{
+ public:
+
+  Detector( StrongClassifierDirectSelection* classifier );
+  virtual ~Detector( void );
+
+  void classify( Mat response, Mat samples, float minMargin = 0.0f );
+  void classify( Mat response, Mat samples, float minMargin, float minVariance );
+  void classifySmooth( Mat response, Mat samples, float minMargin = 0 );
+
+  int getNumDetections();
+  float getConfidence( int patchIdx );
+  float getConfidenceOfDetection( int detectionIdx );
+  float getConfidenceOfBestDetection();
+  int getPatchIdxOfBestDetection();
+  int getPatchIdxOfDetection( int detectionIdx );
+  const std::vector<int>& getIdxDetections() const;
+  const std::vector<float>& getConfidences() const;
+  const cv::Mat& getConfImageDisplay() const;
+
+ private:
+
+  void
+  prepareConfidencesMemory( int numPatches );
+  void
+  prepareDetectionsMemory( int numDetections );
+
+  StrongClassifierDirectSelection* m_classifier;
+  std::vector<float> m_confidences;
+  int m_sizeConfidences;
+  int m_numDetections;
+  std::vector<int> m_idxDetections;
+  int m_sizeDetections;
+  int m_idxBestDetection;
+  float m_maxConfidence;
+  cv::Mat_<float> m_confMatrix;
+  cv::Mat_<float> m_confMatrixSmooth;
+  cv::Mat_<unsigned char> m_confImageDisplay;
+};
+
+class ClassifierThreshold
+{
+ public:
+
+  ClassifierThreshold();
+  virtual ~ClassifierThreshold();
+
+  void update( float value, int target );
+  int eval( float value );
+
+  void* getDistribution( int target );
+
+ private:
+
+  EstimatedGaussDistribution* m_posSamples;
+  EstimatedGaussDistribution* m_negSamples;
+
+  float m_threshold;
+  int m_parity;
+};
+
+class EstimatedGaussDistribution
+   {
+   public:
+
+     EstimatedGaussDistribution();
+     EstimatedGaussDistribution(float P_mean, float R_mean, float P_sigma, float R_sigma);
+     virtual ~EstimatedGaussDistribution();
+
+     void update(float value); //, float timeConstant = -1.0);
+
+     float getMean();
+     float getSigma();
+     void setValues(float mean, float sigma);
+
+   private:
+
+     float m_mean;
+     float m_sigma;
+     float m_P_mean;
+     float m_P_sigma;
+     float m_R_mean;
+     float m_R_sigma;
+   };
 
 } /* namespace cv */
 

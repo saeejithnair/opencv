@@ -143,9 +143,27 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   return true;
 }
 
-bool TrackerBoosting::updateImpl( const Mat& /*image*/, Rect& /*boundingBox*/)
+bool TrackerBoosting::updateImpl( const Mat& image, Rect& /*boundingBox*/)
 {
-  return false;
+  //get the last location [AAM] X(k-1)
+  Ptr<TrackerTargetState> lastLocation = model->getLastTargetState();
+  Rect lastBoundingBox( lastLocation->getTargetPosition().x, lastLocation->getTargetPosition().y, lastLocation->getTargetWidth(),
+                        lastLocation->getTargetHeight() );
+
+  //sampling new frame based on last location
+  ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_TRACK );
+  sampler->sampling( image, lastBoundingBox );
+  std::vector<Mat> detectSamples = sampler->getSamples();
+  if( detectSamples.empty() )
+    return false;
+
+  //extract features from new samples
+  featureSet->extraction( detectSamples );
+  std::vector<Mat> response = featureSet->getResponses();
+
+
+  return true;
+
 }
 
 } /* namespace cv */
