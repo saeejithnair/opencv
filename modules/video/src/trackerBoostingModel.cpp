@@ -53,10 +53,11 @@ TrackerBoostingModel::TrackerBoostingModel( const Rect& boundingBox )
 
   width = boundingBox.width;
   height = boundingBox.height;
+  mode = MODE_POSITIVE;
 
   Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> initState =
       new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState( Point2f( boundingBox.x, boundingBox.y ), boundingBox.width,
-                                                                           boundingBox.height );
+                                                                           boundingBox.height, true, Mat() );
   trajectory.push_back( initState );
 }
 
@@ -68,6 +69,56 @@ void TrackerBoostingModel::modelEstimationImpl( const std::vector<Mat>& response
 void TrackerBoostingModel::modelUpdateImpl()
 {
 
+}
+
+void TrackerBoostingModel::setMode( int trainingMode, const std::vector<Mat>& samples )
+{
+  currentSample.clear();
+  currentSample = samples;
+
+  mode = trainingMode;
+}
+
+void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
+{
+  if( currentSample.empty() )
+  {
+    CV_Error( -1, "The samples in Model estimation are empty" );
+    return;
+  }
+
+  for ( size_t i = 0; i < responses.size(); i++ )
+  {
+    //for each column (one sample) there are #num_feature
+    //get informations from currentSample
+    for ( int j = 0; j < responses.at( i ).cols; j++ )
+    {
+
+      Size currentSize;
+      Point currentOfs;
+      currentSample.at( j ).locateROI( currentSize, currentOfs );
+      bool foreground;
+      if( mode == MODE_POSITIVE || mode == MODE_CLASSIFY )
+      {
+        foreground = true;
+      }
+      else if( mode == MODE_NEGATIVE )
+      {
+        foreground = false;
+      }
+
+      //get the column of the HAAR responses
+      Mat singleResponse = responses.at( i ).col( j );
+
+      //create the state
+      Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> currentState = new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState(
+          currentOfs, width, height, foreground, singleResponse );
+
+      confidenceMap.push_back( std::make_pair( currentState, 0 ) );
+
+    }
+
+  }
 }
 
 }

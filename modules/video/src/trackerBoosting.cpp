@@ -113,11 +113,15 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   if( !sampler->addTrackerSamplerAlgorithm( CSSampler ) )
     return false;
 
-  Ptr<TrackerSamplerCS>( CSSampler )->setMode( TrackerSamplerCS::MODE_INIT );
+  Ptr<TrackerSamplerCS>( CSSampler )->setMode( TrackerSamplerCS::MODE_POSITIVE );
   sampler->sampling( image, boundingBox );
-  std::vector<Mat> samples = sampler->getSamples();
+  std::vector<Mat> posSamples = sampler->getSamples();
 
-  if( samples.empty() )
+  Ptr<TrackerSamplerCS>( CSSampler )->setMode( TrackerSamplerCS::MODE_NEGATIVE );
+  sampler->sampling( image, boundingBox );
+  std::vector<Mat> negSamples = sampler->getSamples();
+
+  if( posSamples.empty() || negSamples.empty() )
     return false;
 
   //compute HAAR features
@@ -128,8 +132,10 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 
   if( !featureSet->addTrackerFeature( trackerFeature ) )
     return false;
-  featureSet->extraction( samples );
-  const std::vector<Mat> response = featureSet->getResponses();
+  featureSet->extraction( posSamples );
+  const std::vector<Mat> posResponse = featureSet->getResponses();
+  featureSet->extraction( negSamples );
+  const std::vector<Mat> negResponse = featureSet->getResponses();
 
   //Model
   model = new TrackerBoostingModel( boundingBox );
@@ -138,12 +144,15 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   model->setTrackerStateEstimator( stateEstimator );
 
   //TODO Run model estimation and update
-  model->modelEstimation( response );
+  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
+  model->modelEstimation( posResponse );
+  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_NEGATIVE, negSamples );
+  model->modelEstimation( negResponse );
   model->modelUpdate();
   return true;
 }
 
-bool TrackerBoosting::updateImpl( const Mat& image, Rect& /*boundingBox*/)
+bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
 {
   //get the last location [AAM] X(k-1)
   Ptr<TrackerTargetState> lastLocation = model->getLastTargetState();
@@ -151,7 +160,7 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& /*boundingBox*/)
                         lastLocation->getTargetHeight() );
 
   //sampling new frame based on last location
-  ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_TRACK );
+  ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_CLASSIFY );
   sampler->sampling( image, lastBoundingBox );
   std::vector<Mat> detectSamples = sampler->getSamples();
   if( detectSamples.empty() )
@@ -161,6 +170,50 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& /*boundingBox*/)
   featureSet->extraction( detectSamples );
   std::vector<Mat> response = featureSet->getResponses();
 
+  //predict new location
+  ConfidenceMap cmap;
+  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_CLASSIFY, detectSamples );
+  ( (Ptr<TrackerBoostingModel> ) model )->responseToConfidenceMap( response, cmap );
+  ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->setCurrentConfidenceMap( cmap );
+
+  if( !model->runStateEstimator() )
+  {
+    return false;
+  }
+
+  Ptr<TrackerTargetState> currentState = model->getLastTargetState();
+  boundingBox = Rect( currentState->getTargetPosition().x, currentState->getTargetPosition().y, currentState->getTargetWidth(),
+                      currentState->getTargetHeight() );
+
+  //sampling new frame based on new location
+  //Positive sampling
+  ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_POSITIVE );
+  sampler->sampling( image, boundingBox );
+  std::vector<Mat> posSamples = sampler->getSamples();
+
+  //Negative sampling
+  ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_NEGATIVE );
+  sampler->sampling( image, boundingBox );
+  std::vector<Mat> negSamples = sampler->getSamples();
+
+  if( posSamples.empty() || negSamples.empty() )
+    return false;
+
+  //extract features
+  featureSet->extraction( posSamples );
+  std::vector<Mat> posResponse = featureSet->getResponses();
+
+  featureSet->extraction( negSamples );
+  std::vector<Mat> negResponse = featureSet->getResponses();
+
+  //model estimate
+  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
+  model->modelEstimation( posResponse );
+  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_NEGATIVE, negSamples );
+  model->modelEstimation( negResponse );
+
+  //model update
+  model->modelUpdate();
 
   return true;
 

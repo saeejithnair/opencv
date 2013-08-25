@@ -586,8 +586,10 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
      * \param position Top left corner of the bounding box
      * \param width Width of the bounding box
      * \param height Height of the bounding box
+     * \param foreground label for target or background
+     * \param features features extracted
      */
-    TrackerAdaBoostingTargetState( const Point2f& position, int width, int height );
+    TrackerAdaBoostingTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& features );
 
     /**
      * \brief Destructor
@@ -596,10 +598,25 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
     {
     }
     ;
+
+    /**
+     * setters and getters
+     */
+    void setTargetFg( bool foreground );
+    void setFeatures( const Mat& features );
+    bool isTargetFg() const;
+    Mat getFeatures() const;
+
+   private:
+    bool isTarget;
+    Mat targetFeatures;
+
   };
 
   TrackerStateEstimatorAdaBoosting( int numClassifer, Size patchSize );
   ~TrackerStateEstimatorAdaBoosting();
+
+  void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
 
  protected:
   Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
@@ -611,6 +628,8 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
   int numBaseClassifier;
   bool trained;
   Size initPatchSize;
+
+  ConfidenceMap currentConfidenceMap;
 };
 
 /**
@@ -685,8 +704,9 @@ class CV_EXPORTS_W TrackerSamplerCS : public TrackerSamplerAlgorithm
  public:
   enum
   {
-    MODE_INIT = 1,  // mode for init samples
-    MODE_TRACK = 2  // mode for update samples
+    MODE_POSITIVE = 1,  // mode for positive samples
+    MODE_NEGATIVE = 2,  // mode for negative samples
+    MODE_CLASSIFY = 3  // mode for classify samples
   };
 
   struct CV_EXPORTS Params
@@ -709,7 +729,7 @@ class CV_EXPORTS_W TrackerSamplerCS : public TrackerSamplerAlgorithm
  private:
   Rect getTrackingROI( float searchFactor );
   Rect RectMultiply( const Rect & rect, float f );
-  std::vector<Mat>  patchesRegularScan( const Mat& image, Rect trackingROI, Size patchSize );
+  std::vector<Mat> patchesRegularScan( const Mat& image, Rect trackingROI, Size patchSize );
   void setCheckedROI( Rect imageROI );
 
   Params params;

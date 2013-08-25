@@ -219,7 +219,7 @@ TrackerSamplerCS::TrackerSamplerCS( const TrackerSamplerCS::Params &parameters )
     params( parameters )
 {
   className = "CS";
-  mode = MODE_INIT;
+  mode = MODE_POSITIVE;
 }
 
 void TrackerSamplerCS::setMode( int samplingMode )
@@ -234,12 +234,10 @@ TrackerSamplerCS::~TrackerSamplerCS()
 
 bool TrackerSamplerCS::samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample )
 {
-  if( mode == MODE_INIT )
-  {
-    trackedPatch = boundingBox;
-    Size imageSize( image.cols, image.rows );
-    validROI = Rect( 0, 0, imageSize.width, imageSize.height );
-  }
+
+  trackedPatch = boundingBox;
+  Size imageSize( image.cols, image.rows );
+  validROI = Rect( 0, 0, imageSize.width, imageSize.height );
 
   Size trackedPatchSize( trackedPatch.width, trackedPatch.height );
   Rect trackingROI = getTrackingROI( params.searchFactor );

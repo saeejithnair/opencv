@@ -242,17 +242,7 @@ void TrackerStateEstimatorMILBoosting::updateImpl( std::vector<ConfidenceMap>& c
 }
 
 /**
- * TrackerAdaBoostingTargetState::TrackerAdaBoostingTargetState
- */
-TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::TrackerAdaBoostingTargetState( const Point2f& position, int width, int height )
-{
-  setTargetPosition( position );
-  setTargetWidth( width );
-  setTargetHeight( height );
-}
-
-/**
- * TrackerStateEstimatorBoosting
+ * TrackerStateEstimatorAdaBoosting
  */
 TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClassifer, Size patchSize )
 {
@@ -262,9 +252,48 @@ TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClass
   trained = false;
 }
 
+/**
+ * TrackerAdaBoostingTargetState::TrackerAdaBoostingTargetState
+ */
+TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::TrackerAdaBoostingTargetState( const Point2f& position, int width, int height,
+                                                                                                bool foreground, const Mat& features )
+{
+  setTargetPosition( position );
+  setTargetWidth( width );
+  setTargetHeight( height );
+
+  setTargetFg( foreground );
+  setFeatures( features );
+}
+
+void TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::setTargetFg( bool foreground )
+{
+  isTarget = foreground;
+}
+
+void TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::setFeatures( const Mat& features )
+{
+  targetFeatures = features;
+}
+
+bool TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::isTargetFg() const
+{
+  return isTarget;
+}
+
+Mat TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::getFeatures() const
+{
+  return targetFeatures;
+}
+
 TrackerStateEstimatorAdaBoosting::~TrackerStateEstimatorAdaBoosting()
 {
 
+}
+void TrackerStateEstimatorAdaBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
+{
+  currentConfidenceMap.clear();
+  currentConfidenceMap = confidenceMap;
 }
 
 Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
@@ -304,7 +333,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorSVM::estimateImpl( const std::vecto
   return confidenceMaps.back().back().first;
 }
 
-void TrackerStateEstimatorSVM::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/ )
+void TrackerStateEstimatorSVM::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/)
 {
 
 }

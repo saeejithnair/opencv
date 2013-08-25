@@ -53,7 +53,12 @@ namespace cv
 class TrackerBoostingModel : public TrackerModel
 {
  public:
-
+  enum
+  {
+    MODE_POSITIVE = 1,    // mode for positive features
+    MODE_NEGATIVE = 2,    // mode for negative features
+    MODE_CLASSIFY = 3    // mode for classify step
+  };
   /**
    * \brief Constructor
    * \param boundingBox The first boundingBox
@@ -68,6 +73,17 @@ class TrackerBoostingModel : public TrackerModel
   }
   ;
 
+  /**
+   * \brief Set the mode
+   */
+  void setMode( int trainingMode, const std::vector<Mat>& samples );
+
+  /**
+   * \brief Create the ConfidenceMap from a list of responses
+   * \param responses The list of the responses
+   * \param confidenceMap The output
+   */
+  void responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap );
 
  protected:
   void modelEstimationImpl( const std::vector<Mat>& responses );
@@ -77,6 +93,10 @@ class TrackerBoostingModel : public TrackerModel
 
   int width;  //initial width of the boundingBox
   int height;  //initial height of the boundingBox
+
+  std::vector<Mat> currentSample;
+
+  int mode;
 };
 
 } /* namespace cv */
