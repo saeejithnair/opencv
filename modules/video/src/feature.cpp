@@ -233,6 +233,10 @@ void CvHaarEvaluator::init( const CvFeatureParams *_featureParams, int _maxSampl
 void CvHaarEvaluator::setImage( const Mat& img, uchar clsLabel, int idx )
 {
   CV_DbgAssert( !sum.empty() && !tilted.empty() && !normfactor.empty() );
+
+  winSize.width = img.cols;
+  winSize.height = img.rows;
+
   CvFeatureEvaluator::setImage( img, clsLabel, idx );
   Mat innSum( winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>( (int) idx ) );
   Mat innTilted( winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>( (int) idx ) );

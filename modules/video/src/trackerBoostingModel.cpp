@@ -63,7 +63,7 @@ TrackerBoostingModel::TrackerBoostingModel( const Rect& boundingBox )
 
 void TrackerBoostingModel::modelEstimationImpl( const std::vector<Mat>& responses )
 {
-
+  responseToConfidenceMap( responses, currentConfidenceMap );
 }
 
 void TrackerBoostingModel::modelUpdateImpl()

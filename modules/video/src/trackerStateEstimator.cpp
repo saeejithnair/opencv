@@ -298,11 +298,14 @@ void TrackerStateEstimatorAdaBoosting::setCurrentConfidenceMap( ConfidenceMap& c
 
 Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
-  return confidenceMaps.back().back().first;
+  //TODO temp
+  return currentConfidenceMap.at( 0 ).first;
 }
 
 void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/)
 {
+  int iterations = 0;
+
   if( !trained )
   {
     //this is the first time that the classifier is built
@@ -311,8 +314,27 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& /
     int iterationInit = 50;
     boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, useFeatureExchange, iterationInit );
     trained = true;
+    iterations = 50;
+  }
+  else
+  {
+    iterations = 1;
   }
 
+  for ( int curInitStep = 0; curInitStep < iterations; curInitStep++ )
+  {
+    //TODO
+    /*
+    classifier->update( image, trackingPatches->getSpecialRect( "UpperLeft" ), -1 );
+    classifier->update( image, trackedPatch, 1 );
+    classifier->update( image, trackingPatches->getSpecialRect( "UpperRight" ), -1 );
+    classifier->update( image, trackedPatch, 1 );
+    classifier->update( image, trackingPatches->getSpecialRect( "LowerLeft" ), -1 );
+    classifier->update( image, trackedPatch, 1 );
+    classifier->update( image, trackingPatches->getSpecialRect( "LowerRight" ), -1 );
+    classifier->update( image, trackedPatch, 1 );
+    */
+  }
 }
 
 /**

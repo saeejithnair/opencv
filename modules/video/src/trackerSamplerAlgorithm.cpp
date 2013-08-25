@@ -297,6 +297,16 @@ std::vector<Mat> TrackerSamplerCS::patchesRegularScan( const Mat& image, Rect tr
   else
     setCheckedROI( trackingROI );
 
+  if( mode == MODE_POSITIVE )
+  {
+    int num = 4;
+    sample.resize( num );
+    Mat singleSample = image( trackingROI );
+    for ( int i = 0; i < num; i++ )
+      sample[i] = singleSample;
+    return sample;
+  }
+
   int stepCol = (int) floor( ( 1.0f - params.overlap ) * (float) patchSize.width + 0.5f );
   int stepRow = (int) floor( ( 1.0f - params.overlap ) * (float) patchSize.height + 0.5f );
   if( stepCol <= 0 )
@@ -327,6 +337,17 @@ std::vector<Mat> TrackerSamplerCS::patchesRegularScan( const Mat& image, Rect tr
   m_rectLowerLeft.x = ROI.x;
   m_rectLowerRight.y = ROI.y + ROI.height - patchSize.height;
   m_rectLowerRight.x = ROI.x + ROI.width - patchSize.width;
+
+  if( mode == MODE_NEGATIVE )
+  {
+    int num = 4;
+    sample.resize( num );
+    sample[0] = image( m_rectUpperLeft );
+    sample[1] = image( m_rectUpperRight );
+    sample[2] = image( m_rectLowerLeft );
+    sample[3] = image( m_rectLowerRight );
+    return sample;
+  }
 
   int numPatchesX;
   int numPatchesY;
