@@ -50,7 +50,7 @@ namespace cv
 //http://vision.ucsd.edu/~bbabenko/project_miltrack.shtml
 
 class BaseClassifier;
-class WeakClassifier;
+class WeakClassifierHaarFeature;
 class EstimatedGaussDistribution;
 class ClassifierThreshold;
 
@@ -59,11 +59,10 @@ class StrongClassifierDirectSelection
  public:
 
   StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, bool useFeatureEx = false, int iterationInit = 0 );
-
-  virtual
-  ~StrongClassifierDirectSelection();
+  virtual ~StrongClassifierDirectSelection();
 
   bool update( Mat response, Rect ROI, int target, float importance = 1.0 );
+  float eval(  Mat response, Rect ROI );
 
  private:
 
@@ -87,20 +86,22 @@ class BaseClassifier
  public:
 
   BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize );
-  BaseClassifier( int numWeakClassifier, int iterationInit, WeakClassifier** weakClassifier );
+  BaseClassifier( int numWeakClassifier, int iterationInit, WeakClassifierHaarFeature** weakClassifier );
 
-  WeakClassifier** getReferenceWeakClassifier();
+  WeakClassifierHaarFeature** getReferenceWeakClassifier();
   void trainClassifier( Mat response, Rect ROI, int target, float importance, bool* errorMask );
   int selectBestClassifier( bool* errorMask, float importance, std::vector<float> & errors );
   int replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
   void replaceClassifierStatistic( int sourceIndex, int targetIndex );
   int getIdxOfNewWeakClassifier();
+  int eval( Mat response, Rect ROI );
 
   virtual ~BaseClassifier();
 
  protected:
 
-  WeakClassifier** weakClassifier;
+  void generateRandomClassifier(Size patchSize);
+  WeakClassifierHaarFeature** weakClassifier;
   bool m_referenceWeakClassifier;
   int m_numWeakClassifier;
   int m_selectedClassifier;
@@ -116,21 +117,28 @@ class WeakClassifierHaarFeature
 
  public:
   WeakClassifierHaarFeature( Size patchSize );
-  virtual
-  ~WeakClassifierHaarFeature();
+  virtual ~WeakClassifierHaarFeature();
 
   bool update( Mat response, Rect ROI, int target );
   int eval( Mat response, Rect ROI );
-  float getValue( Mat response, Rect ROI );
-  int getType();
-  EstimatedGaussDistribution* getPosDistribution();
-  EstimatedGaussDistribution* getNegDistribution();
-  void resetPosDist();
-  void initPosDist();
+  //TODO MOD
+  //float getValue( Mat response, Rect ROI );
+  //TODO MOD
+  //int getType();
+  //TODO MOD
+  //EstimatedGaussDistribution* getPosDistribution();
+  //TODO MOD
+  //EstimatedGaussDistribution* getNegDistribution();
+  //TODO MOD
+  //void resetPosDist();
+  //TODO MOD
+  //void initPosDist();
 
  private:
-  float m_feature;
-  ClassifierThreshold* m_classifier;
+  //TODO MOD
+  //float m_feature;
+  //TODO MOD
+  //ClassifierThreshold* m_classifier;
   void generateRandomClassifier();
 
 };

@@ -51,8 +51,6 @@ namespace cv
 TrackerBoostingModel::TrackerBoostingModel( const Rect& boundingBox )
 {
 
-  width = boundingBox.width;
-  height = boundingBox.height;
   mode = MODE_POSITIVE;
 
   Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> initState =
@@ -112,7 +110,7 @@ void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& resp
 
       //create the state
       Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> currentState = new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState(
-          currentOfs, width, height, foreground, singleResponse );
+          currentOfs, currentSample.at( j ).cols, currentSample.at( j ).rows, foreground, singleResponse );
 
       confidenceMap.push_back( std::make_pair( currentState, 0 ) );
 

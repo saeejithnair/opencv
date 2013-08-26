@@ -302,7 +302,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const st
   return currentConfidenceMap.at( 0 ).first;
 }
 
-void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/)
+void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
 {
   int iterations = 0;
 
@@ -321,19 +321,21 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& /
     iterations = 1;
   }
 
+  ConfidenceMap lastConfidenceMap = confidenceMaps.back();
   for ( int curInitStep = 0; curInitStep < iterations; curInitStep++ )
   {
-    //TODO
-    /*
-    classifier->update( image, trackingPatches->getSpecialRect( "UpperLeft" ), -1 );
-    classifier->update( image, trackedPatch, 1 );
-    classifier->update( image, trackingPatches->getSpecialRect( "UpperRight" ), -1 );
-    classifier->update( image, trackedPatch, 1 );
-    classifier->update( image, trackingPatches->getSpecialRect( "LowerLeft" ), -1 );
-    classifier->update( image, trackedPatch, 1 );
-    classifier->update( image, trackingPatches->getSpecialRect( "LowerRight" ), -1 );
-    classifier->update( image, trackedPatch, 1 );
-    */
+    for ( size_t i = 0; i < lastConfidenceMap.size(); i += 2 )
+    {
+      Ptr<TrackerAdaBoostingTargetState> currentTargetStatePositive = lastConfidenceMap.at( i ).first;
+      Rect currentRectPositive( currentTargetStatePositive->getTargetPosition().x, currentTargetStatePositive->getTargetPosition().y, currentTargetStatePositive->getTargetWidth(),
+                        currentTargetStatePositive->getTargetHeight() );
+      boostClassifier->update( currentTargetStatePositive->getFeatures(), currentRectPositive, -1 );
+
+      Ptr<TrackerAdaBoostingTargetState> currentTargetStateNegative = lastConfidenceMap.at( i+1 ).first;
+      Rect currentRectNegative( currentTargetStateNegative->getTargetPosition().x, currentTargetStateNegative->getTargetPosition().y, currentTargetStateNegative->getTargetWidth(),
+                        currentTargetStateNegative->getTargetHeight() );
+      boostClassifier->update( currentTargetStateNegative->getFeatures(), currentRectNegative, 1 );
+    }
   }
 }
 

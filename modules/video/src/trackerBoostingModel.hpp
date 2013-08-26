@@ -91,9 +91,6 @@ class TrackerBoostingModel : public TrackerModel
 
  private:
 
-  int width;  //initial width of the boundingBox
-  int height;  //initial height of the boundingBox
-
   std::vector<Mat> currentSample;
 
   int mode;
