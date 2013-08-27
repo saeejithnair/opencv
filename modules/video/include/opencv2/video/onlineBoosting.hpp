@@ -64,7 +64,7 @@ class StrongClassifierDirectSelection
 
   bool update( Mat response, Rect ROI, int target, float importance = 1.0 );
   float eval( Mat response );
-  float classifySmooth( const Mat& response, int& idx );
+  float classifySmooth( const Mat& response, const Rect& sampleROI, int& idx );
   int getNumBaseClassifier();
   Size getPatchSize() const;
   Rect getROI() const;

@@ -254,6 +254,16 @@ TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClass
   sampleROI = ROI;
 }
 
+Rect TrackerStateEstimatorAdaBoosting::getSampleROI() const
+{
+  return sampleROI;
+}
+
+void TrackerStateEstimatorAdaBoosting::setSampleROI( const Rect& ROI )
+{
+  sampleROI = ROI;
+}
+
 /**
  * TrackerAdaBoostingTargetState::TrackerAdaBoostingTargetState
  */
@@ -317,9 +327,9 @@ Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const st
     }
   }
   int bestIndex;
-  float confidence = boostClassifier->classifySmooth( states, bestIndex );
-  //TODO temp (get bestIndex from classifySmooth)
-  bestIndex = 0;
+  float confidence = boostClassifier->classifySmooth( states, sampleROI, bestIndex );
+
+  // get bestIndex from classifySmooth
   return currentConfidenceMap.at( bestIndex ).first;
 
 }

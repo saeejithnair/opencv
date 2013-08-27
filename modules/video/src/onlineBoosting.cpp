@@ -91,9 +91,11 @@ Rect StrongClassifierDirectSelection::getROI() const
   return ROI;
 }
 
-float StrongClassifierDirectSelection::classifySmooth( const Mat& response, int& idx )
+float StrongClassifierDirectSelection::classifySmooth( const Mat& response, const Rect& sampleROI, int& idx )
 {
   //TODO
+  ROI = sampleROI;
+  idx = 0;
   float confidence = 0;
   //detector->classify (image, patches);
   detector->classifySmooth( response );
@@ -105,10 +107,8 @@ float StrongClassifierDirectSelection::classifySmooth( const Mat& response, int&
     return confidence;
   }
   idx = detector->getPatchIdxOfBestDetection();
+  confidence = detector->getConfidenceOfBestDetection();
   /*
-   trackedPatch = patches->getRect(  );
-   confidence = detector->getConfidenceOfBestDetection();
-
    classifier->update( image, patches->getSpecialRect( "UpperLeft" ), -1 );
    classifier->update( image, trackedPatch, 1 );
    classifier->update( image, patches->getSpecialRect( "UpperRight" ), -1 );
@@ -120,8 +120,7 @@ float StrongClassifierDirectSelection::classifySmooth( const Mat& response, int&
 
    return true;*/
 
-  idx = 0;
-  return 0.0;
+  return confidence;
 }
 
 bool StrongClassifierDirectSelection::update( Mat response, Rect ROI, int target, float importance )
@@ -365,7 +364,7 @@ int BaseClassifier::getIdxOfNewWeakClassifier()
 
 int BaseClassifier::eval( Mat response )
 {
-  return weakClassifier[m_selectedClassifier]->eval( response );
+  return weakClassifier[m_selectedClassifier]->eval( response.col( m_selectedClassifier ) );
 }
 
 BaseClassifier::~BaseClassifier()
@@ -465,7 +464,7 @@ int Detector::getPatchIdxOfDetection( int detectionIdx )
 
 void Detector::classifySmooth( Mat response, float minMargin )
 {
-  int numPatches = response.rows * response.cols;
+  int numPatches = response.rows;
 
   prepareConfidencesMemory( numPatches );
 
@@ -503,7 +502,7 @@ void Detector::classifySmooth( Mat response, float minMargin )
     for ( int col = 0; col < patchGrid.width; col++ )
     {
       //int returnedInLayer;
-      m_confidences[curPatch] = m_classifier->eval( response );
+      m_confidences[curPatch] = m_classifier->eval( response.row( curPatch ) );
 
       // fill matrix
       m_confMatrix( row, col ) = m_confidences[curPatch];
@@ -562,6 +561,11 @@ void Detector::classifySmooth( Mat response, float minMargin )
 int Detector::getNumDetections()
 {
   return m_numDetections;
+}
+
+float Detector::getConfidenceOfBestDetection()
+{
+  return m_maxConfidence;
 }
 
 ClassifierThreshold::ClassifierThreshold()

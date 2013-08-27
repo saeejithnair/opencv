@@ -616,6 +616,9 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
   TrackerStateEstimatorAdaBoosting( int numClassifer, int nFeatures, Size patchSize, const Rect& ROI );
   ~TrackerStateEstimatorAdaBoosting();
 
+  Rect getSampleROI() const;
+  void setSampleROI( const Rect& ROI );
+
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
 
  protected:

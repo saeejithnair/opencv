@@ -165,6 +165,8 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_CLASSIFY );
   sampler->sampling( image, lastBoundingBox );
   std::vector<Mat> detectSamples = sampler->getSamples();
+  Rect ROI = ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->getROI();
+
   if( detectSamples.empty() )
     return false;
 
@@ -177,6 +179,7 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_CLASSIFY, detectSamples );
   ( (Ptr<TrackerBoostingModel> ) model )->responseToConfidenceMap( response, cmap );
   ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->setCurrentConfidenceMap( cmap );
+  ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->setSampleROI( ROI );
 
   if( !model->runStateEstimator() )
   {
