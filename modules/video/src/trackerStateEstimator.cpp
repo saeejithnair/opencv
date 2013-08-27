@@ -96,8 +96,8 @@ String TrackerStateEstimator::getClassName() const
 /**
  * TrackerStateEstimatorMILBoosting::TrackerMILTargetState
  */
-TrackerStateEstimatorMILBoosting::TrackerMILTargetState::TrackerMILTargetState( const Point2f& position, int width, int height,
-                                                                                bool foreground, const Mat& features )
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::TrackerMILTargetState( const Point2f& position, int width, int height, bool foreground,
+                                                                                const Mat& features )
 {
   setTargetPosition( position );
   setTargetWidth( width );
@@ -151,7 +151,7 @@ uint TrackerStateEstimatorMILBoosting::max_idx( const std::vector<float> &v )
   return (uint) ( findPtr - beginPtr );
 }
 
-Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& /*confidenceMaps*/ )
+Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& /*confidenceMaps*/)
 {
   //run ClfMilBoost classify in order to compute next location
   if( currentConfidenceMap.empty() )
@@ -244,12 +244,14 @@ void TrackerStateEstimatorMILBoosting::updateImpl( std::vector<ConfidenceMap>& c
 /**
  * TrackerStateEstimatorAdaBoosting
  */
-TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClassifer, Size patchSize )
+TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClassifer, int nFeatures, Size patchSize, const Rect& ROI )
 {
   className = "ADABOOSTING";
   numBaseClassifier = numClassifer;
+  numFeatures = nFeatures;
   initPatchSize = patchSize;
   trained = false;
+  sampleROI = ROI;
 }
 
 /**
@@ -298,8 +300,28 @@ void TrackerStateEstimatorAdaBoosting::setCurrentConfidenceMap( ConfidenceMap& c
 
 Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
-  //TODO temp
-  return currentConfidenceMap.at( 0 ).first;
+  //run classify in order to compute next location
+  if( currentConfidenceMap.empty() )
+    return 0;
+
+  Mat states;
+  states.create( currentConfidenceMap.size(), numFeatures, CV_32FC1 );
+  for ( size_t i = 0; i < currentConfidenceMap.size(); i++ )
+  {
+    Ptr<TrackerAdaBoostingTargetState> currentTargetState = currentConfidenceMap.at( i ).first;
+    Mat stateFeatures = currentTargetState->getFeatures();
+    for ( int j = 0; j < stateFeatures.rows; j++ )
+    {
+      //fill the positive trainData with the value of the feature j for sample i
+      states.at<float>( i, j ) = stateFeatures.at<float>( j, 0 );
+    }
+  }
+  int bestIndex;
+  float confidence = boostClassifier->classifySmooth( states, bestIndex );
+  //TODO temp (get bestIndex from classifySmooth)
+  bestIndex = 0;
+  return currentConfidenceMap.at( bestIndex ).first;
+
 }
 
 void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
@@ -312,7 +334,7 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     int numWeakClassifier = numBaseClassifier * 10;
     bool useFeatureExchange = true;
     int iterationInit = 50;
-    boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, useFeatureExchange, iterationInit );
+    boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange, iterationInit );
     trained = true;
     iterations = 50;
   }
@@ -327,13 +349,13 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     for ( size_t i = 0; i < lastConfidenceMap.size(); i += 2 )
     {
       Ptr<TrackerAdaBoostingTargetState> currentTargetStatePositive = lastConfidenceMap.at( i ).first;
-      Rect currentRectPositive( currentTargetStatePositive->getTargetPosition().x, currentTargetStatePositive->getTargetPosition().y, currentTargetStatePositive->getTargetWidth(),
-                        currentTargetStatePositive->getTargetHeight() );
+      Rect currentRectPositive( currentTargetStatePositive->getTargetPosition().x, currentTargetStatePositive->getTargetPosition().y,
+                                currentTargetStatePositive->getTargetWidth(), currentTargetStatePositive->getTargetHeight() );
       boostClassifier->update( currentTargetStatePositive->getFeatures(), currentRectPositive, -1 );
 
-      Ptr<TrackerAdaBoostingTargetState> currentTargetStateNegative = lastConfidenceMap.at( i+1 ).first;
-      Rect currentRectNegative( currentTargetStateNegative->getTargetPosition().x, currentTargetStateNegative->getTargetPosition().y, currentTargetStateNegative->getTargetWidth(),
-                        currentTargetStateNegative->getTargetHeight() );
+      Ptr<TrackerAdaBoostingTargetState> currentTargetStateNegative = lastConfidenceMap.at( i + 1 ).first;
+      Rect currentRectNegative( currentTargetStateNegative->getTargetPosition().x, currentTargetStateNegative->getTargetPosition().y,
+                                currentTargetStateNegative->getTargetWidth(), currentTargetStateNegative->getTargetHeight() );
       boostClassifier->update( currentTargetStateNegative->getFeatures(), currentRectNegative, 1 );
     }
   }

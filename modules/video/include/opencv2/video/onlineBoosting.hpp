@@ -53,16 +53,21 @@ class BaseClassifier;
 class WeakClassifierHaarFeature;
 class EstimatedGaussDistribution;
 class ClassifierThreshold;
+class Detector;
 
 class StrongClassifierDirectSelection
 {
  public:
 
-  StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, bool useFeatureEx = false, int iterationInit = 0 );
+  StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, const Rect& sampleROI, bool useFeatureEx = false, int iterationInit = 0 );
   virtual ~StrongClassifierDirectSelection();
 
   bool update( Mat response, Rect ROI, int target, float importance = 1.0 );
-  float eval(  Mat response, Rect ROI );
+  float eval( Mat response );
+  float classifySmooth( const Mat& response, int& idx );
+  int getNumBaseClassifier();
+  Size getPatchSize() const;
+  Rect getROI() const;
 
  private:
 
@@ -79,6 +84,9 @@ class StrongClassifierDirectSelection
   bool * m_errorMask;
   std::vector<float> m_errors;
   std::vector<float> m_sumErrors;
+
+  Detector* detector;
+  Rect ROI;
 };
 
 class BaseClassifier
@@ -94,13 +102,13 @@ class BaseClassifier
   int replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
   void replaceClassifierStatistic( int sourceIndex, int targetIndex );
   int getIdxOfNewWeakClassifier();
-  int eval( Mat response, Rect ROI );
+  int eval( Mat response );
 
   virtual ~BaseClassifier();
 
  protected:
 
-  void generateRandomClassifier(Size patchSize);
+  void generateRandomClassifier( Size patchSize );
   WeakClassifierHaarFeature** weakClassifier;
   bool m_referenceWeakClassifier;
   int m_numWeakClassifier;
@@ -120,7 +128,7 @@ class WeakClassifierHaarFeature
   virtual ~WeakClassifierHaarFeature();
 
   bool update( Mat response, Rect ROI, int target );
-  int eval( Mat response, Rect ROI );
+  int eval( Mat response );
   //TODO MOD
   //float getValue( Mat response, Rect ROI );
   //TODO MOD
@@ -138,7 +146,7 @@ class WeakClassifierHaarFeature
   //TODO MOD
   //float m_feature;
   //TODO MOD
-  //ClassifierThreshold* m_classifier;
+  ClassifierThreshold* m_classifier;
   void generateRandomClassifier();
 
 };
@@ -152,7 +160,7 @@ class Detector
 
   void classify( Mat response, Mat samples, float minMargin = 0.0f );
   void classify( Mat response, Mat samples, float minMargin, float minVariance );
-  void classifySmooth( Mat response, Mat samples, float minMargin = 0 );
+  void classifySmooth( Mat response, float minMargin = 0 );
 
   int getNumDetections();
   float getConfidence( int patchIdx );
@@ -166,10 +174,8 @@ class Detector
 
  private:
 
-  void
-  prepareConfidencesMemory( int numPatches );
-  void
-  prepareDetectionsMemory( int numDetections );
+  void prepareConfidencesMemory( int numPatches );
+  void prepareDetectionsMemory( int numDetections );
 
   StrongClassifierDirectSelection* m_classifier;
   std::vector<float> m_confidences;
@@ -206,28 +212,29 @@ class ClassifierThreshold
 };
 
 class EstimatedGaussDistribution
-   {
-   public:
+{
+ public:
 
-     EstimatedGaussDistribution();
-     EstimatedGaussDistribution(float P_mean, float R_mean, float P_sigma, float R_sigma);
-     virtual ~EstimatedGaussDistribution();
+  EstimatedGaussDistribution();
+  EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma );
+  virtual ~EstimatedGaussDistribution();
 
-     void update(float value); //, float timeConstant = -1.0);
+  void update( float value );  //, float timeConstant = -1.0);
 
-     float getMean();
-     float getSigma();
-     void setValues(float mean, float sigma);
+  float getMean();
+  float getSigma();
+  void setValues( float mean, float sigma );
 
-   private:
+ private:
 
-     float m_mean;
-     float m_sigma;
-     float m_P_mean;
-     float m_P_sigma;
-     float m_R_mean;
-     float m_R_sigma;
-   };
+  float m_mean;
+  float m_sigma;
+  float m_P_mean;
+  float m_P_sigma;
+  float m_R_mean;
+  float m_R_sigma;
+};
+
 
 } /* namespace cv */
 

@@ -613,7 +613,7 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
 
   };
 
-  TrackerStateEstimatorAdaBoosting( int numClassifer, Size patchSize );
+  TrackerStateEstimatorAdaBoosting( int numClassifer, int nFeatures, Size patchSize, const Rect& ROI );
   ~TrackerStateEstimatorAdaBoosting();
 
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
@@ -626,8 +626,10 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
 
  private:
   int numBaseClassifier;
+  int numFeatures;
   bool trained;
   Size initPatchSize;
+  Rect sampleROI;
 
   ConfidenceMap currentConfidenceMap;
 };
@@ -725,7 +727,7 @@ class CV_EXPORTS_W TrackerSamplerCS : public TrackerSamplerAlgorithm
   ~TrackerSamplerCS();
 
   bool samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
-
+  Rect getROI() const;
  private:
   Rect getTrackingROI( float searchFactor );
   Rect RectMultiply( const Rect & rect, float f );

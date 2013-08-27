@@ -57,7 +57,7 @@ TrackerBoosting::Params::Params()
   numClassifiers = 100;
   samplerOverlap = 0.99f;
   samplerSearchFactor = 2;
-  featureSetNumFeatures = 250;
+  featureSetNumFeatures = 1050;
 }
 
 void TrackerBoosting::Params::read( const cv::FileNode& fn )
@@ -124,6 +124,8 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   if( posSamples.empty() || negSamples.empty() )
     return false;
 
+  Rect ROI = Ptr<TrackerSamplerCS>( CSSampler )->getROI();
+
   //compute HAAR features
   TrackerFeatureHAAR::Params HAARparameters;
   HAARparameters.numFeatures = params.featureSetNumFeatures;
@@ -139,11 +141,11 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 
   //Model
   model = new TrackerBoostingModel( boundingBox );
-  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting( params.numClassifiers,
-                                                                                               Size( boundingBox.width, boundingBox.height ) );
+  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting( params.numClassifiers, params.featureSetNumFeatures,
+                                                                                               Size( boundingBox.width, boundingBox.height ), ROI );
   model->setTrackerStateEstimator( stateEstimator );
 
-  //TODO Run model estimation and update
+  //Run model estimation and update
   ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
   model->modelEstimation( posResponse );
   ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_NEGATIVE, negSamples );

@@ -45,7 +45,8 @@
 namespace cv
 {
 
-StrongClassifierDirectSelection::StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, bool useFeatureEx, int iterationInit )
+StrongClassifierDirectSelection::StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, const Rect& sampleROI,
+                                                                  bool useFeatureEx, int iterationInit )
 {
   //StrongClassifier
   numBaseClassifier = numBaseClf;
@@ -66,6 +67,9 @@ StrongClassifierDirectSelection::StrongClassifierDirectSelection( int numBaseClf
   m_errorMask = new bool[numAllWeakClassifier];
   m_errors.resize( numAllWeakClassifier );
   m_sumErrors.resize( numAllWeakClassifier );
+
+  ROI = sampleROI;
+  detector = new Detector( this );
 }
 
 StrongClassifierDirectSelection::~StrongClassifierDirectSelection()
@@ -74,6 +78,50 @@ StrongClassifierDirectSelection::~StrongClassifierDirectSelection()
     delete baseClassifier[curBaseClassifier];
   delete[] baseClassifier;
   alpha.clear();
+  delete detector;
+}
+
+Size StrongClassifierDirectSelection::getPatchSize() const
+{
+  return patchSize;
+}
+
+Rect StrongClassifierDirectSelection::getROI() const
+{
+  return ROI;
+}
+
+float StrongClassifierDirectSelection::classifySmooth( const Mat& response, int& idx )
+{
+  //TODO
+  float confidence = 0;
+  //detector->classify (image, patches);
+  detector->classifySmooth( response );
+
+  //move to best detection
+  if( detector->getNumDetections() <= 0 )
+  {
+    confidence = 0;
+    return confidence;
+  }
+  idx = detector->getPatchIdxOfBestDetection();
+  /*
+   trackedPatch = patches->getRect(  );
+   confidence = detector->getConfidenceOfBestDetection();
+
+   classifier->update( image, patches->getSpecialRect( "UpperLeft" ), -1 );
+   classifier->update( image, trackedPatch, 1 );
+   classifier->update( image, patches->getSpecialRect( "UpperRight" ), -1 );
+   classifier->update( image, trackedPatch, 1 );
+   classifier->update( image, patches->getSpecialRect( "LowerLeft" ), -1 );
+   classifier->update( image, trackedPatch, 1 );
+   classifier->update( image, patches->getSpecialRect( "LowerRight" ), -1 );
+   classifier->update( image, trackedPatch, 1 );
+
+   return true;*/
+
+  idx = 0;
+  return 0.0;
 }
 
 bool StrongClassifierDirectSelection::update( Mat response, Rect ROI, int target, float importance )
@@ -123,15 +171,20 @@ bool StrongClassifierDirectSelection::update( Mat response, Rect ROI, int target
   return true;
 }
 
-float StrongClassifierDirectSelection::eval( Mat response, Rect ROI )
+float StrongClassifierDirectSelection::eval( Mat response )
 {
   float value = 0.0f;
   int curBaseClassifier = 0;
 
   for ( curBaseClassifier = 0; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
-    value += baseClassifier[curBaseClassifier]->eval( response, ROI ) * alpha[curBaseClassifier];
+    value += baseClassifier[curBaseClassifier]->eval( response ) * alpha[curBaseClassifier];
 
   return value;
+}
+
+int StrongClassifierDirectSelection::getNumBaseClassifier()
+{
+  return numBaseClassifier;
 }
 
 BaseClassifier::BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize )
@@ -196,7 +249,9 @@ void BaseClassifier::trainClassifier( Mat response, Rect ROI, int target, float 
 
   for ( int curK = 0; curK <= K; curK++ )
     for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
-      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( response, ROI, target );
+    {
+      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( response.row( curWeakClassifier ), ROI, target );
+    }
 
 }
 
@@ -308,9 +363,9 @@ int BaseClassifier::getIdxOfNewWeakClassifier()
   return m_idxOfNewWeakClassifier;
 }
 
-int BaseClassifier::eval( Mat response, Rect ROI )
+int BaseClassifier::eval( Mat response )
 {
-  return weakClassifier[m_selectedClassifier]->eval( response, ROI );
+  return weakClassifier[m_selectedClassifier]->eval( response );
 }
 
 BaseClassifier::~BaseClassifier()
@@ -329,13 +384,20 @@ BaseClassifier::~BaseClassifier()
 WeakClassifierHaarFeature::WeakClassifierHaarFeature( Size patchSize )
 {
   //TODO
-  /*m_feature = new FeatureHaar( patchSize );
-   generateRandomClassifier();
-   m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
-   m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );*/
+  //m_feature = new FeatureHaar( patchSize );
+  generateRandomClassifier();
+  (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 );
+  (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 );
+  //m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
+  //m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );
 }
 
-int WeakClassifierHaarFeature::eval( Mat response, Rect ROI )
+void WeakClassifierHaarFeature::generateRandomClassifier()
+{
+  m_classifier = new ClassifierThreshold();
+}
+
+int WeakClassifierHaarFeature::eval( Mat response )
 {
   //TODO
   return response.at<float>( 0, 0 );
@@ -343,13 +405,18 @@ int WeakClassifierHaarFeature::eval( Mat response, Rect ROI )
 
 WeakClassifierHaarFeature::~WeakClassifierHaarFeature()
 {
-  //TODO
+  delete m_classifier;
 }
 
 bool WeakClassifierHaarFeature::update( Mat response, Rect ROI, int target )
 {
   //TODO
-  return true;
+  float value = response.at<float>( 0, 0 );
+
+  m_classifier->update( value, target );
+
+  return ( m_classifier->eval( value ) != target );
+
 }
 
 Detector::Detector( StrongClassifierDirectSelection* classifier )
@@ -367,4 +434,246 @@ Detector::~Detector()
 {
 
 }
+
+void Detector::prepareConfidencesMemory( int numPatches )
+{
+  if( numPatches <= m_sizeConfidences )
+    return;
+
+  m_sizeConfidences = numPatches;
+  m_confidences.resize( numPatches );
+}
+
+void Detector::prepareDetectionsMemory( int numDetections )
+{
+  if( numDetections <= m_sizeDetections )
+    return;
+
+  m_sizeDetections = numDetections;
+  m_idxDetections.resize( numDetections );
+}
+
+int Detector::getPatchIdxOfBestDetection()
+{
+  return m_idxBestDetection;
+}
+
+int Detector::getPatchIdxOfDetection( int detectionIdx )
+{
+  return m_idxDetections[detectionIdx];
+}
+
+void Detector::classifySmooth( Mat response, float minMargin )
+{
+  int numPatches = response.rows * response.cols;
+
+  prepareConfidencesMemory( numPatches );
+
+  m_numDetections = 0;
+  m_idxBestDetection = -1;
+  m_maxConfidence = -FLT_MAX;
+  int numBaseClassifiers = m_classifier->getNumBaseClassifier();
+
+  //compute grid
+  //TODO 0.99 overlap from params
+  Size patchSz = m_classifier->getPatchSize();
+  int stepCol = (int) floor( ( 1.0f - 0.99f ) * (float) patchSz.width + 0.5f );
+  int stepRow = (int) floor( ( 1.0f - 0.99f ) * (float) patchSz.height + 0.5f );
+  if( stepCol <= 0 )
+    stepCol = 1;
+  if( stepRow <= 0 )
+    stepRow = 1;
+
+  Size patchGrid;
+  Rect ROI = m_classifier->getROI();
+  patchGrid.height = ( (int) ( (float) ( ROI.height - patchSz.height ) / stepRow ) + 1 );
+  patchGrid.width = ( (int) ( (float) ( ROI.width - patchSz.width ) / stepCol ) + 1 );
+
+  if( ( patchGrid.width != m_confMatrix.cols ) || ( patchGrid.height != m_confMatrix.rows ) )
+  {
+    m_confMatrix.create( patchGrid.height, patchGrid.width );
+    m_confMatrixSmooth.create( patchGrid.height, patchGrid.width );
+    m_confImageDisplay.create( patchGrid.height, patchGrid.width );
+  }
+
+  int curPatch = 0;
+  // Eval and filter
+  for ( int row = 0; row < patchGrid.height; row++ )
+  {
+    for ( int col = 0; col < patchGrid.width; col++ )
+    {
+      //int returnedInLayer;
+      m_confidences[curPatch] = m_classifier->eval( response );
+
+      // fill matrix
+      m_confMatrix( row, col ) = m_confidences[curPatch];
+      curPatch++;
+    }
+  }
+
+  // Filter
+  //cv::GaussianBlur(m_confMatrix,m_confMatrixSmooth,cv::Size(3,3),0.8);
+  cv::GaussianBlur( m_confMatrix, m_confMatrixSmooth, cv::Size( 3, 3 ), 0 );
+
+  // Make display friendly
+  double min_val, max_val;
+  cv::minMaxLoc( m_confMatrixSmooth, &min_val, &max_val );
+  for ( int y = 0; y < m_confImageDisplay.rows; y++ )
+  {
+    unsigned char* pConfImg = m_confImageDisplay[y];
+    const float* pConfData = m_confMatrixSmooth[y];
+    for ( int x = 0; x < m_confImageDisplay.cols; x++, pConfImg++, pConfData++ )
+    {
+      *pConfImg = static_cast<unsigned char>( 255.0 * ( *pConfData - min_val ) / ( max_val - min_val ) );
+    }
+  }
+
+  // Get best detection
+  curPatch = 0;
+  for ( int row = 0; row < patchGrid.height; row++ )
+  {
+    for ( int col = 0; col < patchGrid.width; col++ )
+    {
+      // fill matrix
+      m_confidences[curPatch] = m_confMatrixSmooth( row, col );
+
+      if( m_confidences[curPatch] > m_maxConfidence )
+      {
+        m_maxConfidence = m_confidences[curPatch];
+        m_idxBestDetection = curPatch;
+      }
+      if( m_confidences[curPatch] > minMargin )
+      {
+        m_numDetections++;
+      }
+      curPatch++;
+    }
+  }
+
+  prepareDetectionsMemory( m_numDetections );
+  int curDetection = -1;
+  for ( int curPatch = 0; curPatch < numPatches; curPatch++ )
+  {
+    if( m_confidences[curPatch] > minMargin )
+      m_idxDetections[++curDetection] = curPatch;
+  }
+}
+
+int Detector::getNumDetections()
+{
+  return m_numDetections;
+}
+
+ClassifierThreshold::ClassifierThreshold()
+{
+  m_posSamples = new EstimatedGaussDistribution();
+  m_negSamples = new EstimatedGaussDistribution();
+  m_threshold = 0.0f;
+  m_parity = 0;
+}
+
+ClassifierThreshold::~ClassifierThreshold()
+{
+  if( m_posSamples != NULL )
+    delete m_posSamples;
+  if( m_negSamples != NULL )
+    delete m_negSamples;
+}
+
+void*
+ClassifierThreshold::getDistribution( int target )
+{
+  if( target == 1 )
+    return m_posSamples;
+  else
+    return m_negSamples;
+}
+
+void ClassifierThreshold::update( float value, int target )
+{
+  //update distribution
+  if( target == 1 )
+    m_posSamples->update( value );
+  else
+    m_negSamples->update( value );
+
+  //adapt threshold and parity
+  m_threshold = ( m_posSamples->getMean() + m_negSamples->getMean() ) / 2.0f;
+  m_parity = ( m_posSamples->getMean() > m_negSamples->getMean() ) ? 1 : -1;
+}
+
+int ClassifierThreshold::eval( float value )
+{
+  return ( ( ( m_parity * ( value - m_threshold ) ) > 0 ) ? 1 : -1 );
+}
+
+EstimatedGaussDistribution::EstimatedGaussDistribution()
+{
+  m_mean = 0;
+  m_sigma = 1;
+  this->m_P_mean = 1000;
+  this->m_R_mean = 0.01f;
+  this->m_P_sigma = 1000;
+  this->m_R_sigma = 0.01f;
+}
+
+EstimatedGaussDistribution::EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma )
+{
+  m_mean = 0;
+  m_sigma = 1;
+  this->m_P_mean = P_mean;
+  this->m_R_mean = R_mean;
+  this->m_P_sigma = P_sigma;
+  this->m_R_sigma = R_sigma;
+}
+
+EstimatedGaussDistribution::~EstimatedGaussDistribution()
+{
+}
+
+void EstimatedGaussDistribution::update( float value )
+{
+  //update distribution (mean and sigma) using a kalman filter for each
+
+  float K;
+  float minFactor = 0.001f;
+
+  //mean
+
+  K = m_P_mean / ( m_P_mean + m_R_mean );
+  if( K < minFactor )
+    K = minFactor;
+
+  m_mean = K * value + ( 1.0f - K ) * m_mean;
+  m_P_mean = m_P_mean * m_R_mean / ( m_P_mean + m_R_mean );
+
+  K = m_P_sigma / ( m_P_sigma + m_R_sigma );
+  if( K < minFactor )
+    K = minFactor;
+
+  float tmp_sigma = K * ( m_mean - value ) * ( m_mean - value ) + ( 1.0f - K ) * m_sigma * m_sigma;
+  m_P_sigma = m_P_sigma * m_R_mean / ( m_P_sigma + m_R_sigma );
+
+  m_sigma = static_cast<float>( sqrt( tmp_sigma ) );
+  if( m_sigma <= 1.0f )
+    m_sigma = 1.0f;
+
+}
+
+void EstimatedGaussDistribution::setValues( float mean, float sigma )
+{
+  this->m_mean = mean;
+  this->m_sigma = sigma;
+}
+
+float EstimatedGaussDistribution::getMean()
+{
+  return m_mean;
+}
+
+float EstimatedGaussDistribution::getSigma()
+{
+  return m_sigma;
+}
+
 } /* namespace cv */

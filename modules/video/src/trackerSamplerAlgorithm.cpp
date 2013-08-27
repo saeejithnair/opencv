@@ -276,6 +276,11 @@ Rect TrackerSamplerCS::RectMultiply( const Rect & rect, float f )
   return r_tmp;
 }
 
+Rect TrackerSamplerCS::getROI() const
+{
+  return ROI;
+}
+
 void TrackerSamplerCS::setCheckedROI( Rect imageROI )
 {
   int dCol, dRow;
