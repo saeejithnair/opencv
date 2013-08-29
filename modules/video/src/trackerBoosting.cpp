@@ -230,10 +230,10 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   std::vector<Mat> negResponse = featureSet->getResponses();
 
   //model estimate
-  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
-  model->modelEstimation( posResponse );
   ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_NEGATIVE, negSamples );
   model->modelEstimation( negResponse );
+  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
+  model->modelEstimation( posResponse );
 
   //model update
   model->modelUpdate();
