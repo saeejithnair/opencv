@@ -344,7 +344,8 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     int numWeakClassifier = numBaseClassifier * 10;
     bool useFeatureExchange = true;
     int iterationInit = 50;
-    boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange, iterationInit );
+    boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange,
+                                                           iterationInit );
     trained = true;
     iterations = 50;
   }
@@ -356,17 +357,25 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
   ConfidenceMap lastConfidenceMap = confidenceMaps.back();
   for ( int curInitStep = 0; curInitStep < iterations; curInitStep++ )
   {
-    for ( size_t i = 0; i < lastConfidenceMap.size(); i += 2 )
+    for ( size_t i = 0; i < lastConfidenceMap.size()/2; i++ )
     {
-      Ptr<TrackerAdaBoostingTargetState> currentTargetStatePositive = lastConfidenceMap.at( i ).first;
-      Rect currentRectPositive( currentTargetStatePositive->getTargetPosition().x, currentTargetStatePositive->getTargetPosition().y,
-                                currentTargetStatePositive->getTargetWidth(), currentTargetStatePositive->getTargetHeight() );
-      boostClassifier->update( currentTargetStatePositive->getFeatures(), currentRectPositive, -1 );
+      Ptr<TrackerAdaBoostingTargetState> currentTargetState = lastConfidenceMap.at( i ).first;
+      Rect currentRect( currentTargetState->getTargetPosition().x, currentTargetState->getTargetPosition().y, currentTargetState->getTargetWidth(),
+                        currentTargetState->getTargetHeight() );
+      int currentFg = 1;
+      if( !currentTargetState->isTargetFg() )
+        currentFg = -1;
 
-      Ptr<TrackerAdaBoostingTargetState> currentTargetStateNegative = lastConfidenceMap.at( i + 1 ).first;
-      Rect currentRectNegative( currentTargetStateNegative->getTargetPosition().x, currentTargetStateNegative->getTargetPosition().y,
-                                currentTargetStateNegative->getTargetWidth(), currentTargetStateNegative->getTargetHeight() );
-      boostClassifier->update( currentTargetStateNegative->getFeatures(), currentRectNegative, 1 );
+      boostClassifier->update( currentTargetState->getFeatures(), currentRect, currentFg );
+
+      Ptr<TrackerAdaBoostingTargetState> currentTargetState2 = lastConfidenceMap.at( i + lastConfidenceMap.size()/2 ).first;
+      currentRect = Rect( currentTargetState2->getTargetPosition().x, currentTargetState2->getTargetPosition().y, currentTargetState2->getTargetWidth(),
+                          currentTargetState2->getTargetHeight() );
+      currentFg = 1;
+      if( !currentTargetState2->isTargetFg() )
+        currentFg = -1;
+
+      boostClassifier->update( currentTargetState2->getFeatures(), currentRect, currentFg );
     }
   }
 }

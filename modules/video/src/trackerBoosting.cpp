@@ -146,10 +146,10 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   model->setTrackerStateEstimator( stateEstimator );
 
   //Run model estimation and update
-  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
-  model->modelEstimation( posResponse );
   ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_NEGATIVE, negSamples );
   model->modelEstimation( negResponse );
+  ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
+  model->modelEstimation( posResponse );
   model->modelUpdate();
   return true;
 }
@@ -170,6 +170,18 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   if( detectSamples.empty() )
     return false;
 
+  /*//TODO debug samples
+  Mat f;
+  image.copyTo( f );
+
+  for ( size_t i = 0; i < detectSamples.size(); i = i + 10 )
+  {
+    Size sz;
+    Point off;
+    detectSamples.at( i ).locateROI( sz, off );
+    rectangle( f, Rect( off.x, off.y, detectSamples.at( i ).cols, detectSamples.at( i ).rows ), Scalar( 255, 0, 0 ), 1 );
+  }*/
+
   //extract features from new samples
   featureSet->extraction( detectSamples );
   std::vector<Mat> response = featureSet->getResponses();
@@ -189,6 +201,12 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   Ptr<TrackerTargetState> currentState = model->getLastTargetState();
   boundingBox = Rect( currentState->getTargetPosition().x, currentState->getTargetPosition().y, currentState->getTargetWidth(),
                       currentState->getTargetHeight() );
+
+  /*//TODO debug
+  rectangle( f, lastBoundingBox, Scalar( 0, 255, 0 ), 1 );
+  rectangle( f, boundingBox, Scalar( 0, 0, 255 ), 1 );
+  imshow( "f", f );
+  //waitKey( 0 );*/
 
   //sampling new frame based on new location
   //Positive sampling

@@ -306,7 +306,7 @@ std::vector<Mat> TrackerSamplerCS::patchesRegularScan( const Mat& image, Rect tr
   {
     int num = 4;
     sample.resize( num );
-    Mat singleSample = image( trackingROI );
+    Mat singleSample = image( trackedPatch );
     for ( int i = 0; i < num; i++ )
       sample[i] = singleSample;
     return sample;
