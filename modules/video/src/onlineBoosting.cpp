@@ -91,14 +91,14 @@ Rect StrongClassifierDirectSelection::getROI() const
   return ROI;
 }
 
-float StrongClassifierDirectSelection::classifySmooth( const Mat& response, const Rect& sampleROI, int& idx )
+float StrongClassifierDirectSelection::classifySmooth( const std::vector<Mat>& images, const Rect& sampleROI, int& idx )
 {
   //TODO
   ROI = sampleROI;
   idx = 0;
   float confidence = 0;
   //detector->classify (image, patches);
-  detector->classifySmooth( response );
+  detector->classifySmooth( images );
 
   //move to best detection
   if( detector->getNumDetections() <= 0 )
@@ -123,13 +123,13 @@ float StrongClassifierDirectSelection::classifySmooth( const Mat& response, cons
   return confidence;
 }
 
-bool StrongClassifierDirectSelection::update( Mat response, Rect ROI, int target, float importance )
+bool StrongClassifierDirectSelection::update( const Mat& image, Rect ROI, int target, float importance )
 {
   memset( m_errorMask, 0, numAllWeakClassifier * sizeof(bool) );
   m_errors.assign( numAllWeakClassifier, 0 );
   m_sumErrors.assign( numAllWeakClassifier, 0 );
 
-  baseClassifier[0]->trainClassifier( response, ROI, target, importance, m_errorMask );
+  baseClassifier[0]->trainClassifier( image, ROI, target, importance, m_errorMask );
   for ( int curBaseClassifier = 0; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
   {
     int selectedClassifier = baseClassifier[curBaseClassifier]->selectBestClassifier( m_errorMask, importance, m_errors );
@@ -170,13 +170,13 @@ bool StrongClassifierDirectSelection::update( Mat response, Rect ROI, int target
   return true;
 }
 
-float StrongClassifierDirectSelection::eval( Mat response )
+float StrongClassifierDirectSelection::eval( const Mat& response, Rect ROI )
 {
   float value = 0.0f;
   int curBaseClassifier = 0;
 
   for ( curBaseClassifier = 0; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
-    value += baseClassifier[curBaseClassifier]->eval( response ) * alpha[curBaseClassifier];
+    value += baseClassifier[curBaseClassifier]->eval( response, ROI ) * alpha[curBaseClassifier];
 
   return value;
 }
@@ -223,6 +223,19 @@ BaseClassifier::BaseClassifier( int numWeakClassifier, int iterationInit, WeakCl
     m_wWrong[curWeakClassifier] = m_wCorrect[curWeakClassifier] = 1;
 }
 
+BaseClassifier::~BaseClassifier()
+{
+  if( !m_referenceWeakClassifier )
+  {
+    for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
+      delete weakClassifier[curWeakClassifier];
+
+    delete[] weakClassifier;
+  }
+  m_wCorrect.clear();
+  m_wWrong.clear();
+}
+
 void BaseClassifier::generateRandomClassifier( Size patchSize )
 {
   for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
@@ -231,8 +244,21 @@ void BaseClassifier::generateRandomClassifier( Size patchSize )
   }
 }
 
-void BaseClassifier::trainClassifier( Mat response, Rect ROI, int target, float importance, bool* errorMask )
+int BaseClassifier::eval( const Mat& image, Rect ROI )
 {
+  return weakClassifier[m_selectedClassifier]->eval( image, ROI );
+}
+
+float BaseClassifier::getValue( const Mat& image, Rect ROI, int weakClassifierIdx )
+{
+  if( weakClassifierIdx < 0 || weakClassifierIdx >= m_numWeakClassifier )
+    return weakClassifier[m_selectedClassifier]->getValue( image, ROI );
+  return weakClassifier[weakClassifierIdx]->getValue( image, ROI );
+}
+
+void BaseClassifier::trainClassifier( const Mat& image, Rect ROI, int target, float importance, bool* errorMask )
+{
+
   //get poisson value
   double A = 1;
   int K = 0;
@@ -248,10 +274,21 @@ void BaseClassifier::trainClassifier( Mat response, Rect ROI, int target, float 
 
   for ( int curK = 0; curK <= K; curK++ )
     for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
-    {
-      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( response.row( curWeakClassifier ), ROI, target );
-    }
+      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( image, ROI, target );
 
+}
+
+void BaseClassifier::getErrorMask( const Mat& image, Rect ROI, int target, bool* errorMask )
+{
+  for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
+    errorMask[curWeakClassifier] = ( weakClassifier[curWeakClassifier]->eval( image, ROI ) != target );
+}
+
+float BaseClassifier::getError( int curWeakClassifier )
+{
+  if( curWeakClassifier == -1 )
+    curWeakClassifier = m_selectedClassifier;
+  return m_wWrong[curWeakClassifier] / ( m_wWrong[curWeakClassifier] + m_wCorrect[curWeakClassifier] );
 }
 
 int BaseClassifier::selectBestClassifier( bool* errorMask, float importance, std::vector<float> & errors )
@@ -300,6 +337,19 @@ int BaseClassifier::selectBestClassifier( bool* errorMask, float importance, std
   return m_selectedClassifier;
 }
 
+void BaseClassifier::getErrors( float* errors )
+{
+  for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
+  {
+    if( errors[curWeakClassifier] == FLT_MAX )
+      continue;
+
+    errors[curWeakClassifier] = m_wWrong[curWeakClassifier] / ( m_wWrong[curWeakClassifier] + m_wCorrect[curWeakClassifier] );
+
+    CV_Assert( errors[curWeakClassifier] > 0 );
+  }
+}
+
 int BaseClassifier::replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize )
 {
   float maxError = 0.0f;
@@ -338,7 +388,9 @@ int BaseClassifier::replaceWeakestClassifier( const std::vector<float> & errors,
   }
   else
     return -1;
+
 }
+
 void BaseClassifier::replaceClassifierStatistic( int sourceIndex, int targetIndex )
 {
   CV_Assert( targetIndex >= 0 );
@@ -352,43 +404,544 @@ void BaseClassifier::replaceClassifierStatistic( int sourceIndex, int targetInde
   m_wCorrect[sourceIndex] = 1.0f;
 }
 
-WeakClassifierHaarFeature** BaseClassifier::getReferenceWeakClassifier()
-{
-  return weakClassifier;
-}
+#define SQROOTHALF 0.7071
+#define INITSIGMA( numAreas ) ( static_cast<float>( sqrt( 256.0f*256.0f / 12.0f * (numAreas) ) ) );
 
-int BaseClassifier::getIdxOfNewWeakClassifier()
+FeatureHaar::FeatureHaar( Size patchSize )
 {
-  return m_idxOfNewWeakClassifier;
-}
-
-int BaseClassifier::eval( Mat response )
-{
-  return weakClassifier[m_selectedClassifier]->eval( response.col( m_selectedClassifier ) );
-}
-
-BaseClassifier::~BaseClassifier()
-{
-  if( !m_referenceWeakClassifier )
+  try
   {
-    for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
-      delete weakClassifier[curWeakClassifier];
-
-    delete[] weakClassifier;
+    generateRandomFeature( patchSize );
   }
-  m_wCorrect.clear();
-  m_wWrong.clear();
+  catch ( ... )
+  {
+    throw;
+  }
 }
 
+void FeatureHaar::generateRandomFeature( Size patchSize )
+{
+  cv::Point2i position;
+  Size baseDim;
+  Size sizeFactor;
+  int area;
+
+  Size minSize = Size( 3, 3 );
+  int minArea = 9;
+
+  bool valid = false;
+  while ( !valid )
+  {
+    //chosse position and scale
+    position.y = rand() % ( patchSize.height );
+    position.x = rand() % ( patchSize.width );
+
+    baseDim.width = (int) ( ( 1 - sqrt( 1 - (float) rand() / RAND_MAX ) ) * patchSize.width );
+    baseDim.height = (int) ( ( 1 - sqrt( 1 - (float) rand() / RAND_MAX ) ) * patchSize.height );
+
+    //select types
+    //float probType[11] = {0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0950f};
+    float probType[11] =
+    { 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    float prob = (float) rand() / RAND_MAX;
+
+    if( prob < probType[0] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 2;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 1;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+
+      valid = true;
+
+    }
+    else if( prob < probType[0] + probType[1] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 2;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 2;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 4;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 3;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = 2 * baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + 3 * baseDim.height;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 4;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 3;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = 2 * baseDim.width;
+      m_areas[2].y = position.y;
+      m_areas[2].x = position.x + 3 * baseDim.width;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 2;
+      sizeFactor.width = 2;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 5;
+      m_numAreas = 4;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_weights[2] = -1;
+      m_weights[3] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + baseDim.height;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_areas[3].y = position.y + baseDim.height;
+      m_areas[3].x = position.x + baseDim.width;
+      m_areas[3].height = baseDim.height;
+      m_areas[3].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 6;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -9;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = 3 * baseDim.height;
+      m_areas[0].width = 3 * baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = -8 * 128;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 7;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + baseDim.height * 2;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+
+      if( area < minArea )
+        continue;
+
+      m_type = 8;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y;
+      m_areas[2].x = position.x + 2 * baseDim.width;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] + probType[8] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 9;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = 3 * baseDim.height;
+      m_areas[0].width = 3 * baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob
+        < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] + probType[8] + probType[9] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 10;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + baseDim.height * 2;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 128;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob
+        < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] + probType[8] + probType[9]
+            + probType[10] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 11;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y;
+      m_areas[2].x = position.x + 2 * baseDim.width;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 128;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else
+    CV_Assert( false );
+  }
+
+  m_initSize = patchSize;
+  m_curSize = m_initSize;
+  m_scaleFactorWidth = m_scaleFactorHeight = 1.0f;
+  m_scaleAreas.resize( m_numAreas );
+  m_scaleWeights.resize( m_numAreas );
+  for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+  {
+    m_scaleAreas[curArea] = m_areas[curArea];
+    m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( m_areas[curArea].width * m_areas[curArea].height );
+  }
+}
+
+bool FeatureHaar::eval( const Mat& image, Rect ROI, float* result )
+{
+  *result = 0.0f;
+  cv::Point2i offset;
+  offset = cv::Point2i( ROI.x, ROI.y );
+
+  // define the minimum size
+  Size minSize = Size( 3, 3 );
+
+  // printf("in eval %d = %d\n",curSize.width,ROI.width );
+
+  if( m_curSize.width != ROI.width || m_curSize.height != ROI.height )
+  {
+    m_curSize = cv::Size( ROI.width, ROI.height );
+    if( ! ( m_initSize == m_curSize ) )
+    {
+      m_scaleFactorHeight = (float) m_curSize.height / m_initSize.height;
+      m_scaleFactorWidth = (float) m_curSize.width / m_initSize.width;
+
+      for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+      {
+        m_scaleAreas[curArea].height = (int) floor( (float) m_areas[curArea].height * m_scaleFactorHeight + 0.5f );
+        m_scaleAreas[curArea].width = (int) floor( (float) m_areas[curArea].width * m_scaleFactorWidth + 0.5f );
+
+        if( m_scaleAreas[curArea].height < minSize.height || m_scaleAreas[curArea].width < minSize.width )
+        {
+          m_scaleFactorWidth = 0.0f;
+          return false;
+        }
+
+        m_scaleAreas[curArea].x = (int) floor( (float) m_areas[curArea].x * m_scaleFactorWidth + 0.5f );
+        m_scaleAreas[curArea].y = (int) floor( (float) m_areas[curArea].y * m_scaleFactorHeight + 0.5f );
+        m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( ( m_scaleAreas[curArea].width ) * ( m_scaleAreas[curArea].height ) );
+      }
+    }
+    else
+    {
+      m_scaleFactorWidth = m_scaleFactorHeight = 1.0f;
+      for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+      {
+        m_scaleAreas[curArea] = m_areas[curArea];
+        m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( ( m_areas[curArea].width ) * ( m_areas[curArea].height ) );
+      }
+    }
+  }
+
+  if( m_scaleFactorWidth == 0.0f )
+    return false;
+
+  for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+  {
+    *result += (float) getSum(
+        image, ROI,
+        Rect( m_scaleAreas[curArea].x + offset.x, m_scaleAreas[curArea].y + offset.y, m_scaleAreas[curArea].width, m_scaleAreas[curArea].height ) )
+        * m_scaleWeights[curArea];
+  }
+
+  /*
+   if( image->getUseVariance() )
+   {
+   float variance = (float) image->getVariance( ROI );
+   *result /= variance;
+   }
+   */
+
+  m_response = *result;
+
+  return true;
+}
+
+float FeatureHaar::getSum( const Mat& image, Rect m_ROI, Rect imageROI )
+{
+  // left upper Origin
+  int OriginX = imageROI.x - m_ROI.x;
+  int OriginY = imageROI.y - m_ROI.y;
+
+  // Check and fix width and height
+  int Width = imageROI.width;
+  int Height = imageROI.height;
+
+  if( OriginX + Width >= m_ROI.width )
+    Width = m_ROI.width - OriginX;
+  if( OriginY + Height >= m_ROI.height )
+    Height = m_ROI.height - OriginY;
+
+  int value = image.at<int>( OriginY + Height, OriginX + Width ) + image.at<int>( OriginY, OriginX )
+      - image.at<int>( OriginY, OriginX + Width ) - image.at<int>( OriginY + Height, OriginX );
+
+  return value;
+}
+
+void FeatureHaar::getInitialDistribution( EstimatedGaussDistribution* distribution )
+{
+  distribution->setValues( m_initMean, m_initSigma );
+}
 WeakClassifierHaarFeature::WeakClassifierHaarFeature( Size patchSize )
 {
-  //TODO
-  //m_feature = new FeatureHaar( patchSize );
+  m_feature = new FeatureHaar( patchSize );
   generateRandomClassifier();
-  (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 );
-  (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 );
-  //m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
-  //m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );
+  m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
+  m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );
+}
+
+void WeakClassifierHaarFeature::resetPosDist()
+{
+  m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );
+  m_feature->getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
+}
+
+WeakClassifierHaarFeature::~WeakClassifierHaarFeature()
+{
+  delete m_classifier;
+  delete m_feature;
+
 }
 
 void WeakClassifierHaarFeature::generateRandomClassifier()
@@ -396,42 +949,63 @@ void WeakClassifierHaarFeature::generateRandomClassifier()
   m_classifier = new ClassifierThreshold();
 }
 
-float WeakClassifierHaarFeature::eval( Mat response )
+bool WeakClassifierHaarFeature::update( const Mat& image, Rect ROI, int target )
 {
-  //TODO
-  return response.at<float>( 0, 0 );
-}
+  float value;
 
-WeakClassifierHaarFeature::~WeakClassifierHaarFeature()
-{
-  delete m_classifier;
-}
-
-bool WeakClassifierHaarFeature::update( Mat response, Rect ROI, int target )
-{
-  //TODO
-  float value = response.at<float>( 0, 0 );
+  bool valid = m_feature->eval( image, ROI, &value );
+  if( !valid )
+    return true;
 
   m_classifier->update( value, target );
-
   return ( m_classifier->eval( value ) != target );
-
 }
 
-Detector::Detector( StrongClassifierDirectSelection* classifier )
+int WeakClassifierHaarFeature::eval( const Mat& image, Rect ROI )
 {
-  m_classifier = classifier;
+  float value;
+  bool valid = m_feature->eval( image, ROI, &value );
+  if( !valid )
+    return 0;
+
+  return m_classifier->eval( value );
+}
+
+float WeakClassifierHaarFeature::getValue( const Mat& image, Rect ROI )
+{
+  float value;
+  bool valid = m_feature->eval( image, ROI, &value );
+  if( !valid )
+    return 0;
+
+  return value;
+}
+
+EstimatedGaussDistribution*
+WeakClassifierHaarFeature::getPosDistribution()
+{
+  return static_cast<EstimatedGaussDistribution*>( m_classifier->getDistribution( 1 ) );
+}
+
+EstimatedGaussDistribution*
+WeakClassifierHaarFeature::getNegDistribution()
+{
+  return static_cast<EstimatedGaussDistribution*>( m_classifier->getDistribution( -1 ) );
+}
+
+Detector::Detector( StrongClassifierDirectSelection* classifier ) :
+    m_sizeDetections( 0 )
+{
+  this->m_classifier = classifier;
 
   m_sizeConfidences = 0;
   m_maxConfidence = -FLT_MAX;
   m_numDetections = 0;
   m_idxBestDetection = -1;
-  m_sizeDetections = 0;
 }
 
 Detector::~Detector()
 {
-
 }
 
 void Detector::prepareConfidencesMemory( int numPatches )
@@ -452,19 +1026,9 @@ void Detector::prepareDetectionsMemory( int numDetections )
   m_idxDetections.resize( numDetections );
 }
 
-int Detector::getPatchIdxOfBestDetection()
+void Detector::classifySmooth( const std::vector<Mat>& images, float minMargin )
 {
-  return m_idxBestDetection;
-}
-
-int Detector::getPatchIdxOfDetection( int detectionIdx )
-{
-  return m_idxDetections[detectionIdx];
-}
-
-void Detector::classifySmooth( Mat response, float minMargin )
-{
-  int numPatches = response.rows;
+  int numPatches = images.size();
 
   prepareConfidencesMemory( numPatches );
 
@@ -502,7 +1066,12 @@ void Detector::classifySmooth( Mat response, float minMargin )
     for ( int col = 0; col < patchGrid.width; col++ )
     {
       //int returnedInLayer;
-      m_confidences[curPatch] = m_classifier->eval( response.row( curPatch ) );
+      Size sz;
+      Point offset;
+      images[curPatch].locateROI( sz, offset );
+      sz.width = images[curPatch].cols;
+      sz.height = images[curPatch].rows;
+      m_confidences[curPatch] = m_classifier->eval( images[curPatch], Rect( offset.x, offset.y, sz.width, sz.height ) );
 
       // fill matrix
       m_confMatrix( row, col ) = m_confidences[curPatch];
@@ -563,9 +1132,24 @@ int Detector::getNumDetections()
   return m_numDetections;
 }
 
-float Detector::getConfidenceOfBestDetection()
+float Detector::getConfidence( int patchIdx )
 {
-  return m_maxConfidence;
+  return m_confidences[patchIdx];
+}
+
+float Detector::getConfidenceOfDetection( int detectionIdx )
+{
+  return m_confidences[getPatchIdxOfDetection( detectionIdx )];
+}
+
+int Detector::getPatchIdxOfBestDetection()
+{
+  return m_idxBestDetection;
+}
+
+int Detector::getPatchIdxOfDetection( int detectionIdx )
+{
+  return m_idxDetections[detectionIdx];
 }
 
 ClassifierThreshold::ClassifierThreshold()

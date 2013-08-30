@@ -314,20 +314,16 @@ Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const st
   if( currentConfidenceMap.empty() )
     return 0;
 
-  Mat states;
-  states.create( currentConfidenceMap.size(), numFeatures, CV_32FC1 );
+  std::vector<Mat> images;
+
   for ( size_t i = 0; i < currentConfidenceMap.size(); i++ )
   {
     Ptr<TrackerAdaBoostingTargetState> currentTargetState = currentConfidenceMap.at( i ).first;
-    Mat stateFeatures = currentTargetState->getFeatures();
-    for ( int j = 0; j < stateFeatures.rows; j++ )
-    {
-      //fill the positive trainData with the value of the feature j for sample i
-      states.at<float>( i, j ) = stateFeatures.at<float>( j, 0 );
-    }
+    images.push_back( currentTargetState->getFeatures() );
   }
+
   int bestIndex;
-  float confidence = boostClassifier->classifySmooth( states, sampleROI, bestIndex );
+  float confidence = boostClassifier->classifySmooth( images, sampleROI, bestIndex );
 
   // get bestIndex from classifySmooth
   return currentConfidenceMap.at( bestIndex ).first;

@@ -59,12 +59,13 @@ class StrongClassifierDirectSelection
 {
  public:
 
-  StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, const Rect& sampleROI, bool useFeatureEx = false, int iterationInit = 0 );
+  StrongClassifierDirectSelection( int numBaseClf, int numWeakClf, Size patchSz, const Rect& sampleROI, bool useFeatureEx = false, int iterationInit =
+                                       0 );
   virtual ~StrongClassifierDirectSelection();
 
-  bool update( Mat response, Rect ROI, int target, float importance = 1.0 );
-  float eval( Mat response );
-  float classifySmooth( const Mat& response, const Rect& sampleROI, int& idx );
+  bool update( const Mat& image, Rect ROI, int target, float importance = 1.0 );
+  float eval( const Mat& response, Rect ROI );
+  float classifySmooth( const std::vector<Mat>& images, const Rect& sampleROI, int& idx );
   int getNumBaseClassifier();
   Size getPatchSize() const;
   Rect getROI() const;
@@ -96,15 +97,27 @@ class BaseClassifier
   BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize );
   BaseClassifier( int numWeakClassifier, int iterationInit, WeakClassifierHaarFeature** weakClassifier );
 
-  WeakClassifierHaarFeature** getReferenceWeakClassifier();
-  void trainClassifier( Mat response, Rect ROI, int target, float importance, bool* errorMask );
+  WeakClassifierHaarFeature**
+  getReferenceWeakClassifier()
+  {
+    return weakClassifier;
+  }
+  ;
+  void trainClassifier( const Mat& image, Rect ROI, int target, float importance, bool* errorMask );
   int selectBestClassifier( bool* errorMask, float importance, std::vector<float> & errors );
   int replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
   void replaceClassifierStatistic( int sourceIndex, int targetIndex );
-  int getIdxOfNewWeakClassifier();
-  int eval( Mat response );
-
+  int getIdxOfNewWeakClassifier()
+  {
+    return m_idxOfNewWeakClassifier;
+  }
+  ;
+  int eval( const Mat& image, Rect ROI );
+  float getValue( const Mat& image, Rect ROI, int weakClassifierIdx );
   virtual ~BaseClassifier();
+  void getErrorMask( const Mat& image, Rect ROI, int target, bool* errorMask );
+  float getError( int curWeakClassifier );
+  void getErrors( float* errors );
 
  protected:
 
@@ -120,34 +133,100 @@ class BaseClassifier
 
 };
 
+class FeatureHaar
+{
+
+ public:
+
+  FeatureHaar( Size patchSize );
+
+  void getInitialDistribution( EstimatedGaussDistribution *distribution );
+
+  bool eval( const Mat& image, Rect ROI, float* result );
+
+  float getResponse()
+  {
+    return m_response;
+  }
+  ;
+
+  int getNumAreas()
+  {
+    return m_numAreas;
+  }
+  ;
+
+  const std::vector<int>& getWeights() const
+  {
+    return m_weights;
+  }
+  ;
+
+  const std::vector<Rect>& getAreas() const
+  {
+    return m_areas;
+  }
+  ;
+
+ private:
+
+  int m_type;
+  int m_numAreas;
+  std::vector<int> m_weights;
+  float m_initMean;
+  float m_initSigma;
+
+  void generateRandomFeature( Size imageSize );
+  float getSum( const Mat& image, Rect m_ROI, Rect imgROI );
+
+  std::vector<Rect> m_areas;  // areas within the patch over which to compute the feature
+  cv::Size m_initSize;  // size of the patch used during training
+  cv::Size m_curSize;  // size of the patches currently under investigation
+  float m_scaleFactorHeight;  // scaling factor in vertical direction
+  float m_scaleFactorWidth;  // scaling factor in horizontal direction
+  std::vector<Rect> m_scaleAreas;  // areas after scaling
+  std::vector<float> m_scaleWeights;  // weights after scaling
+  float m_response;
+
+};
+
 class WeakClassifierHaarFeature
 {
 
  public:
+
   WeakClassifierHaarFeature( Size patchSize );
   virtual ~WeakClassifierHaarFeature();
 
-  bool update( Mat response, Rect ROI, int target );
-  float eval( Mat response );
-  //TODO MOD
-  //float getValue( Mat response, Rect ROI );
-  //TODO MOD
-  //int getType();
-  //TODO MOD
-  //EstimatedGaussDistribution* getPosDistribution();
-  //TODO MOD
-  //EstimatedGaussDistribution* getNegDistribution();
-  //TODO MOD
-  //void resetPosDist();
-  //TODO MOD
-  //void initPosDist();
+  bool update( const Mat& image, Rect ROI, int target );
+
+  int eval( const Mat& image, Rect ROI );
+
+  float getValue( const Mat& image, Rect ROI );
+
+  int getType()
+  {
+    return 1;
+  }
+  ;
+
+  EstimatedGaussDistribution*
+  getPosDistribution();
+  EstimatedGaussDistribution*
+  getNegDistribution();
+
+  void
+  resetPosDist();
+  void
+  initPosDist();
 
  private:
-  //TODO MOD
-  //float m_feature;
-  //TODO MOD
+
+  FeatureHaar* m_feature;
   ClassifierThreshold* m_classifier;
-  void generateRandomClassifier();
+
+  void
+  generateRandomClassifier();
 
 };
 
@@ -156,26 +235,55 @@ class Detector
  public:
 
   Detector( StrongClassifierDirectSelection* classifier );
-  virtual ~Detector( void );
+  virtual
+  ~Detector( void );
 
-  void classify( Mat response, Mat samples, float minMargin = 0.0f );
-  void classify( Mat response, Mat samples, float minMargin, float minVariance );
-  void classifySmooth( Mat response, float minMargin = 0 );
+  void
+  classifySmooth( const std::vector<Mat>& image, float minMargin = 0 );
 
-  int getNumDetections();
-  float getConfidence( int patchIdx );
-  float getConfidenceOfDetection( int detectionIdx );
-  float getConfidenceOfBestDetection();
-  int getPatchIdxOfBestDetection();
-  int getPatchIdxOfDetection( int detectionIdx );
-  const std::vector<int>& getIdxDetections() const;
-  const std::vector<float>& getConfidences() const;
-  const cv::Mat& getConfImageDisplay() const;
+  int
+  getNumDetections();
+  float
+  getConfidence( int patchIdx );
+  float
+  getConfidenceOfDetection( int detectionIdx );
+
+  float getConfidenceOfBestDetection()
+  {
+    return m_maxConfidence;
+  }
+  ;
+  int
+  getPatchIdxOfBestDetection();
+
+  int
+  getPatchIdxOfDetection( int detectionIdx );
+
+  const std::vector<int> &
+  getIdxDetections() const
+  {
+    return m_idxDetections;
+  }
+  ;
+  const std::vector<float> &
+  getConfidences() const
+  {
+    return m_confidences;
+  }
+  ;
+
+  const cv::Mat &
+  getConfImageDisplay() const
+  {
+    return m_confImageDisplay;
+  }
 
  private:
 
-  void prepareConfidencesMemory( int numPatches );
-  void prepareDetectionsMemory( int numDetections );
+  void
+  prepareConfidencesMemory( int numPatches );
+  void
+  prepareDetectionsMemory( int numDetections );
 
   StrongClassifierDirectSelection* m_classifier;
   std::vector<float> m_confidences;
@@ -234,7 +342,6 @@ class EstimatedGaussDistribution
   float m_R_mean;
   float m_R_sigma;
 };
-
 
 } /* namespace cv */
 
