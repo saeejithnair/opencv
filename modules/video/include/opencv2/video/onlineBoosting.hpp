@@ -128,7 +128,7 @@ class WeakClassifierHaarFeature
   virtual ~WeakClassifierHaarFeature();
 
   bool update( Mat response, Rect ROI, int target );
-  int eval( Mat response );
+  float eval( Mat response );
   //TODO MOD
   //float getValue( Mat response, Rect ROI );
   //TODO MOD

@@ -396,7 +396,7 @@ void WeakClassifierHaarFeature::generateRandomClassifier()
   m_classifier = new ClassifierThreshold();
 }
 
-int WeakClassifierHaarFeature::eval( Mat response )
+float WeakClassifierHaarFeature::eval( Mat response )
 {
   //TODO
   return response.at<float>( 0, 0 );
