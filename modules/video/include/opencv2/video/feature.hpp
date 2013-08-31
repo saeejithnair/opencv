@@ -219,6 +219,7 @@ class CvHaarFeatureParams : public CvFeatureParams
   virtual bool scanAttr( const std::string prm, const std::string val );
 
   int mode;
+  bool isIntegral;
 };
 
 class CvHaarEvaluator : public CvFeatureEvaluator
@@ -230,6 +231,8 @@ class CvHaarEvaluator : public CvFeatureEvaluator
   virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
   void writeFeature( FileStorage &fs, int fi ) const;  // for old file fornat
  protected:
+  bool isIntegral;
+  
   /* TODO Added from MIL implementation */
   Mat _ii_img;
   void compute_integral( const cv::Mat & img, std::vector<cv::Mat_<float> > & ii_imgs )

@@ -804,7 +804,7 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
     Params();
     int numFeatures;  // # of rects
     Size rectSize;    // rect size
-
+	bool isIntegral;
   };
 
   TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parameters = TrackerFeatureHAAR::Params() );

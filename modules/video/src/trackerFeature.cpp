@@ -156,6 +156,7 @@ TrackerFeatureHAAR::Params::Params()
 {
   numFeatures = 250;
   rectSize = Size( 100, 100 );
+  isIntegral = false;
 }
 
 TrackerFeatureHAAR::TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parameters ) :
@@ -166,6 +167,7 @@ TrackerFeatureHAAR::TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parame
   CvHaarFeatureParams haarParams;
   haarParams.mode = CvHaarFeatureParams::CORE;
   haarParams.numFeatures = params.numFeatures;
+  haarParams.isIntegral = params.isIntegral;
   featureEvaluator = CvFeatureEvaluator::create( CvFeatureParams::HAAR );
   featureEvaluator->init( &haarParams, 1, params.rectSize );
 }

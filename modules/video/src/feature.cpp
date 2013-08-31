@@ -137,8 +137,10 @@ void CvFeatureEvaluator::init( const CvFeatureParams *_featureParams, int _maxSa
 
 void CvFeatureEvaluator::setImage( const Mat &img, uchar clsLabel, int idx )
 {
-  CV_Assert( img.cols == winSize.width );
-  CV_Assert( img.rows == winSize.height );
+  winSize.width = img.cols;
+  winSize.height = img.rows;
+  //CV_Assert( img.cols == winSize.width );
+  //CV_Assert( img.rows == winSize.height );
   CV_Assert( idx < cls.rows );
   cls.ptr<float>( idx )[0] = clsLabel;
 }
@@ -154,18 +156,21 @@ CvHaarFeatureParams::CvHaarFeatureParams() :
     mode( BASIC )
 {
   name = HFP_NAME;
+  isIntegral = false;
 }
 
 CvHaarFeatureParams::CvHaarFeatureParams( int _mode ) :
     mode( _mode )
 {
   name = HFP_NAME;
+  isIntegral = false;
 }
 
 void CvHaarFeatureParams::init( const CvFeatureParams& fp )
 {
   CvFeatureParams::init( fp );
   mode = ( (const CvHaarFeatureParams&) fp ).mode;
+  isIntegral = ( (const CvHaarFeatureParams&) fp ).isIntegral;
 }
 
 void CvHaarFeatureParams::write( FileStorage &fs ) const
@@ -227,6 +232,7 @@ void CvHaarEvaluator::init( const CvFeatureParams *_featureParams, int _maxSampl
   sum.create( (int) _maxSampleCount, cols, CV_32SC1 );
   tilted.create( (int) _maxSampleCount, cols, CV_32SC1 );
   normfactor.create( 1, (int) _maxSampleCount, CV_32FC1 );
+  isIntegral = ((CvHaarFeatureParams*)_featureParams)->isIntegral;
   CvFeatureEvaluator::init( _featureParams, _maxSampleCount, _winSize );
 }
 
@@ -238,14 +244,22 @@ void CvHaarEvaluator::setImage( const Mat& img, uchar clsLabel, int idx )
   winSize.height = img.rows;
 
   CvFeatureEvaluator::setImage( img, clsLabel, idx );
-  Mat innSum( winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>( (int) idx ) );
-  Mat innTilted( winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>( (int) idx ) );
-  Mat innSqSum;
-  integral( img, innSum, innSqSum, innTilted );
-  normfactor.ptr<float>( 0 )[idx] = calcNormFactor( innSum, innSqSum );
+  if( !isIntegral ) 
+  {
+  //Mat innSum( winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>( (int) idx ) );
+  //Mat innTilted( winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>( (int) idx ) );
+  //Mat innSqSum;
+  //integral( img, innSum, innSqSum, innTilted );
+  // normfactor.ptr<float>( 0 )[idx] = calcNormFactor( innSum, innSqSum );
+  // std::vector<Mat_<int> > ii_imgs;
   std::vector<Mat_<float> > ii_imgs;
   compute_integral( img, ii_imgs );
   _ii_img = ii_imgs[0];
+  }
+  else
+  {
+    _ii_img = img;
+  }
 }
 
 void CvHaarEvaluator::writeFeatures( FileStorage &fs, const Mat& featureMap ) const
