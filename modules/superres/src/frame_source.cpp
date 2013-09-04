@@ -118,10 +118,22 @@ namespace
         {
             vc_ >> _frame.getMatRef();
         }
-        else
+        else if(_frame.kind() == _InputArray::GPU_MAT)
         {
             vc_ >> frame_;
             arrCopy(frame_, _frame);
+        }
+        else if(_frame.kind() == _InputArray::OCL_MAT)
+        {
+            vc_ >> frame_;
+            if(!frame_.empty())
+            {
+                arrCopy(frame_, _frame);
+            }
+        }
+        else
+        {
+            //should never get here
         }
     }
 
@@ -187,7 +199,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 //////////////////////////////////////////////////////
 // VideoFrameSource_GPU
 
-#ifndef HAVE_OPENCV_GPU
+#ifndef HAVE_OPENCV_GPUCODEC
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
 {
@@ -196,7 +208,7 @@ Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileNam
     return Ptr<FrameSource>();
 }
 
-#else // HAVE_OPENCV_GPU
+#else // HAVE_OPENCV_GPUCODEC
 
 namespace
 {
@@ -210,7 +222,7 @@ namespace
 
     private:
         String fileName_;
-        VideoReader_GPU reader_;
+        Ptr<gpucodec::VideoReader> reader_;
         GpuMat frame_;
     };
 
@@ -223,13 +235,13 @@ namespace
     {
         if (_frame.kind() == _InputArray::GPU_MAT)
         {
-            bool res = reader_.read(_frame.getGpuMatRef());
+            bool res = reader_->nextFrame(_frame.getGpuMatRef());
             if (!res)
                 _frame.release();
         }
         else
         {
-            bool res = reader_.read(frame_);
+            bool res = reader_->nextFrame(frame_);
             if (!res)
                 _frame.release();
             else
@@ -239,9 +251,7 @@ namespace
 
     void VideoFrameSource_GPU::reset()
     {
-        reader_.close();
-        reader_.open(fileName_);
-        CV_Assert( reader_.isOpened() );
+        reader_ = gpucodec::createVideoReader(fileName_);
     }
 }
 
@@ -250,4 +260,4 @@ Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileNam
     return new VideoFrameSource(fileName);
 }
 
-#endif // HAVE_OPENCV_GPU
+#endif // HAVE_OPENCV_GPUCODEC

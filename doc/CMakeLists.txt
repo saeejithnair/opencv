@@ -17,7 +17,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   set(OPTIONAL_DOC_LIST "")
 
 
-  set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy)
+  set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy bioinspired)
 
   # build lists of modules to be documented
   set(OPENCV2_MODULES "")
@@ -49,12 +49,12 @@ if(BUILD_DOCS AND HAVE_SPHINX)
     set(toc_file "${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc/${mod}.rst")
     if(EXISTS "${toc_file}")
       file(RELATIVE_PATH toc_file "${OpenCV_SOURCE_DIR}/modules" "${toc_file}")
-      set(OPENCV_REFMAN_TOC "${OPENCV_REFMAN_TOC}   ${toc_file}\r\n")
+      set(OPENCV_REFMAN_TOC "${OPENCV_REFMAN_TOC}   ${toc_file}\n")
     endif()
   endforeach()
 
-  file(GLOB_RECURSE _OPENCV_FILES_REF "${OpenCV_SOURCE_DIR}/android/service/doc/*.rst")
-  file(GLOB_RECURSE _OPENCV_FILES_REF_PICT "${OpenCV_SOURCE_DIR}/android/service/doc/*.png" "${OpenCV_SOURCE_DIR}/android/service/doc/*.jpg")
+  file(GLOB_RECURSE _OPENCV_FILES_REF "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.rst")
+  file(GLOB_RECURSE _OPENCV_FILES_REF_PICT "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.png" "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.jpg")
   list(APPEND OPENCV_FILES_REF ${_OPENCV_FILES_REF})
   list(APPEND OPENCV_FILES_REF_PICT ${_OPENCV_FILES_REF_PICT})
 

@@ -9,6 +9,11 @@ that are represented as vectors in a multidimensional space. All objects that im
 descriptor matchers inherit the
 :ocv:class:`DescriptorMatcher` interface.
 
+.. note::
+
+   * An example explaining keypoint matching can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example on descriptor matching evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
+   * An example on one to many image matching can be found at opencv_source_code/samples/cpp/matching_to_many_images.cpp
 
 DescriptorMatcher
 -----------------
@@ -189,7 +194,7 @@ For each query descriptor, finds the training descriptors not farther than the s
 
     :param compactResult: Parameter used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
 
-    :param maxDistance: Threshold for the distance between matched descriptors.
+    :param maxDistance: Threshold for the distance between matched descriptors. Distance means here metric distance (e.g. Hamming distance), not the distance between coordinates (which is measured in Pixels)!
 
 For each query descriptor, the methods find such training descriptors that the distance between the query descriptor and the training descriptor is equal or smaller than ``maxDistance``. Found matches are returned in the distance increasing order.
 
@@ -271,4 +276,3 @@ Flann-based descriptor matcher. This matcher trains :ocv:class:`flann::Index_` o
     };
 
 ..
-

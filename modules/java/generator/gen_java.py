@@ -12,7 +12,7 @@ class_ignore_list = (
     #core
     "FileNode", "FileStorage", "KDTree", "KeyPoint", "DMatch",
     #highgui
-    "VideoWriter", "VideoCapture",
+    "VideoWriter",
 )
 
 const_ignore_list = (
@@ -510,50 +510,118 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "resizeWindow"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
 
+    'VideoCapture' :
+    {
+        "getSupportedPreviewSizes" :
+        {
+            'j_code' :
+"""
+    public java.util.List<org.opencv.core.Size> getSupportedPreviewSizes()
+    {
+        String[] sizes_str = getSupportedPreviewSizes_0(nativeObj).split(",");
+        java.util.List<org.opencv.core.Size> sizes = new java.util.ArrayList<org.opencv.core.Size>(sizes_str.length);
+
+        for (String str : sizes_str) {
+            String[] wh = str.split("x");
+            sizes.add(new org.opencv.core.Size(Double.parseDouble(wh[0]), Double.parseDouble(wh[1])));
+        }
+
+        return sizes;
+    }
+
+""",
+            'jn_code' :
+"""\n    private static native String getSupportedPreviewSizes_0(long nativeObj);\n""",
+            'cpp_code' :
+"""
+JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_getSupportedPreviewSizes_10
+  (JNIEnv *env, jclass, jlong self);
+
+JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_getSupportedPreviewSizes_10
+  (JNIEnv *env, jclass, jlong self)
+{
+    static const char method_name[] = "highgui::VideoCapture_getSupportedPreviewSizes_10()";
+    try {
+        LOGD("%s", method_name);
+        VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
+        union {double prop; const char* name;} u;
+        u.prop = me->get(CAP_PROP_ANDROID_PREVIEW_SIZES_STRING);
+        return env->NewStringUTF(u.name);
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
+    } catch (...) {
+        throwJavaException(env, 0, method_name);
+    }
+    return env->NewStringUTF("");
 }
 
-# { class : { func : {arg_name : ctype} } }
+""",
+        }, # getSupportedPreviewSizes
+    }, # VideoCapture
+}
+
+# { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
 func_arg_fix = {
     '' : {
-        'randu'    : { 'low'     : 'double', 'high'   : 'double', },
-        'randn'    : { 'mean'    : 'double', 'stddev' : 'double', },
-        'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
-        'goodFeaturesToTrack' : { 'corners' : 'vector_Point', },
-        'findFundamentalMat' : { 'points1' : 'vector_Point2f', 'points2' : 'vector_Point2f', },
-        'cornerSubPix' : { 'corners' : 'vector_Point2f', },
-        'minEnclosingCircle' : { 'points' : 'vector_Point2f', },
-        'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
-        'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                       'distCoeffs' : 'vector_double' },
-        'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                             'distCoeffs' : 'vector_double' },
-        'calcOpticalFlowPyrLK' : { 'prevPts' : 'vector_Point2f', 'nextPts' : 'vector_Point2f',
-                                   'status' : 'vector_uchar', 'err' : 'vector_float', },
-        'fitEllipse' : { 'points' : 'vector_Point2f', },
-        'fillPoly' : { 'pts' : 'vector_vector_Point', },
-        'polylines' : { 'pts' : 'vector_vector_Point', },
-        'fillConvexPoly' : { 'points' : 'vector_Point', },
-        'boundingRect' : { 'points' : 'vector_Point', },
-        'approxPolyDP' : { 'curve' : 'vector_Point2f', 'approxCurve' : 'vector_Point2f', },
-        'arcLength' : { 'curve' : 'vector_Point2f', },
-        'pointPolygonTest' : { 'contour' : 'vector_Point2f', },
-        'minAreaRect' : { 'points' : 'vector_Point2f', },
-        'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
-        'hconcat' : { 'src' : 'vector_Mat', },
-        'vconcat' : { 'src' : 'vector_Mat', },
-        'undistortPoints' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f' },
-        'checkRange' : {'pos' : '*'},
-        'meanStdDev' : {'mean' : 'vector_double', 'stddev' : 'vector_double'},
-        'drawContours' : {'contours' : 'vector_vector_Point'},
-        'findContours' : {'contours' : 'vector_vector_Point'},
-        'convexityDefects' : {'contour' : 'vector_Point', 'convexhull' : 'vector_int', 'convexityDefects' : 'vector_Vec4i'},
-        'isContourConvex' : { 'contour' : 'vector_Point', },
-        'convexHull' : {'points' : 'vector_Point', 'hull' : 'vector_int', 'returnPoints' : ''},
-        'projectPoints' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                            'distCoeffs' : 'vector_double' },
-        'initCameraMatrix2D' : {'objectPoints' : 'vector_vector_Point3f', 'imagePoints' : 'vector_vector_Point2f', },
-        'findChessboardCorners' : { 'corners' : 'vector_Point2f' },
-        'drawChessboardCorners' : { 'corners' : 'vector_Point2f' },
+        'randu'    : { 'low'  : {"ctype" : 'double'},
+                       'high' : {"ctype"    : 'double'} },
+        'randn'    : { 'mean'   : {"ctype" : 'double'},
+                       'stddev' : {"ctype"  : 'double'} },
+        'inRange'  : { 'lowerb' : {"ctype" : 'Scalar'},
+                       'upperb' : {"ctype" : 'Scalar'} },
+        'goodFeaturesToTrack' : { 'corners' : {"ctype" : 'vector_Point'} },
+        'findFundamentalMat'  : { 'points1' : {"ctype" : 'vector_Point2f'},
+                                  'points2' : {"ctype" : 'vector_Point2f'} },
+        'cornerSubPix' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'minEnclosingCircle' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'findHomography' : { 'srcPoints' : {"ctype" : 'vector_Point2f'},
+                             'dstPoints' : {"ctype" : 'vector_Point2f'} },
+        'solvePnP' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                      'imagePoints'   : {"ctype" : 'vector_Point2f'},
+                      'distCoeffs'    : {"ctype" : 'vector_double' } },
+        'solvePnPRansac' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                             'imagePoints'  : {"ctype" : 'vector_Point2f'},
+                             'distCoeffs'   : {"ctype" : 'vector_double' } },
+        'calcOpticalFlowPyrLK' : { 'prevPts' : {"ctype" : 'vector_Point2f'},
+                                   'nextPts' : {"ctype" : 'vector_Point2f'},
+                                   'status'  : {"ctype" : 'vector_uchar'},
+                                   'err'     : {"ctype" : 'vector_float'} },
+        'fitEllipse' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'fillPoly'   : { 'pts' : {"ctype" : 'vector_vector_Point'} },
+        'polylines'  : { 'pts' : {"ctype" : 'vector_vector_Point'} },
+        'fillConvexPoly' : { 'points' : {"ctype" : 'vector_Point'} },
+        'boundingRect'   : { 'points' : {"ctype" : 'vector_Point'} },
+        'approxPolyDP' : { 'curve'       : {"ctype" : 'vector_Point2f'},
+                           'approxCurve' : {"ctype" : 'vector_Point2f'} },
+        'arcLength' : { 'curve' : {"ctype" : 'vector_Point2f'} },
+        'pointPolygonTest' : { 'contour' : {"ctype" : 'vector_Point2f'} },
+        'minAreaRect' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'getAffineTransform' : { 'src' : {"ctype" : 'vector_Point2f'},
+                                 'dst' : {"ctype" : 'vector_Point2f'} },
+        'hconcat' : { 'src' : {"ctype" : 'vector_Mat'} },
+        'vconcat' : { 'src' : {"ctype" : 'vector_Mat'} },
+        'undistortPoints' : { 'src' : {"ctype" : 'vector_Point2f'},
+                              'dst' : {"ctype" : 'vector_Point2f'} },
+        'checkRange' : {'pos' : {"ctype" : '*'} },
+        'meanStdDev' : { 'mean'   : {"ctype" : 'vector_double'},
+                         'stddev' : {"ctype" : 'vector_double'} },
+        'drawContours' : {'contours' : {"ctype" : 'vector_vector_Point'} },
+        'findContours' : {'contours' : {"ctype" : 'vector_vector_Point'} },
+        'convexityDefects' : { 'contour'          : {"ctype" : 'vector_Point'},
+                               'convexhull'       : {"ctype" : 'vector_int'},
+                               'convexityDefects' : {"ctype" : 'vector_Vec4i'} },
+        'isContourConvex' : { 'contour' : {"ctype" : 'vector_Point'} },
+        'convexHull' : { 'points' : {"ctype" : 'vector_Point'},
+                         'hull'   : {"ctype" : 'vector_int'},
+                         'returnPoints' : {"ctype" : ''} },
+        'projectPoints' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                            'imagePoints'  : {"ctype" : 'vector_Point2f'},
+                            'distCoeffs'   : {"ctype" : 'vector_double' } },
+        'initCameraMatrix2D' : { 'objectPoints' : {"ctype" : 'vector_vector_Point3f'},
+                                 'imagePoints'  : {"ctype" : 'vector_vector_Point2f'} },
+        'findChessboardCorners' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'drawChessboardCorners' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'mixChannels' : { 'dst' : {"attrib" : []} },
     }, # '', i.e. no class
 } # func_arg_fix
 
@@ -641,10 +709,12 @@ class FuncInfo(object):
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
         self.args = []
-        arg_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
+        func_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
         for a in decl[3]:
             arg = a[:]
-            arg[0] = arg_fix_map.get(arg[1], arg[0])
+            arg_fix_map = func_fix_map.get(arg[1], {})
+            arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
+            arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
             ai = ArgInfo(arg)
             self.args.append(ai)
 
@@ -876,21 +946,51 @@ public class %(jc)s {
                     self.add_func(decl)
 
         self.cpp_code = StringIO()
-        self.cpp_code.write("""
+        self.cpp_code.write(Template("""
 //
 // This file is auto-generated, please don't edit!
 //
 
-#define LOG_TAG "org.opencv.%(m)s"
+#define LOG_TAG "org.opencv.$m"
 
 #include "common.h"
-#include "opencv2/%(m)s.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+#ifdef HAVE_OPENCV_$M
+
+#include <string>
+
+#include "opencv2/$m.hpp"
 
 using namespace cv;
 
+/// throw java exception
+static void throwJavaException(JNIEnv *env, const std::exception *e, const char *method) {
+  std::string what = "unknown exception";
+  jclass je = 0;
+
+  if(e) {
+    std::string exception_type = "std::exception";
+
+    if(dynamic_cast<const cv::Exception*>(e)) {
+      exception_type = "cv::Exception";
+      je = env->FindClass("org/opencv/core/CvException");
+    }
+
+    what = exception_type + ": " + e->what();
+  }
+
+  if(!je) je = env->FindClass("java/lang/Exception");
+  env->ThrowNew(je, what.c_str());
+
+  LOGE("%s caught %s", method, what.c_str());
+  (void)method;        // avoid "unused" warning
+}
+
+
 extern "C" {
 
-""" % {'m' : module} )
+""").substitute( m = module, M = module.upper() ) )
 
         # generate code for the classes
         for name in self.classes.keys():
@@ -905,7 +1005,7 @@ extern "C" {
             java_code = Template(java_code).substitute(imports = imports)
             self.save("%s/%s+%s.java" % (output_path, module, self.classes[name].jname), java_code)
 
-        self.cpp_code.write( '\n} // extern "C"\n' )
+        self.cpp_code.write( '\n} // extern "C"\n\n#endif // HAVE_OPENCV_%s\n' % module.upper() )
         self.save(output_path+"/"+module+".cpp",  self.cpp_code.getvalue())
 
         # report
@@ -1271,23 +1371,18 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname ($argst);
 JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
   ($args)
 {
+    static const char method_name[] = "$module::$fname()";
     try {
-        LOGD("$module::$fname()");
+        LOGD("%s", method_name);
         $prologue
         $retval$cvname( $cvargs );
         $epilogue$ret
-    } catch(cv::Exception e) {
-        LOGD("$module::$fname() catched cv::Exception: %s", e.what());
-        jclass je = env->FindClass("org/opencv/core/CvException");
-        if(!je) je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, e.what());
-        $default
+    } catch(const std::exception &e) {
+        throwJavaException(env, &e, method_name);
     } catch (...) {
-        LOGD("$module::$fname() catched unknown exception (...)");
-        jclass je = env->FindClass("java/lang/Exception");
-        env->ThrowNew(je, "Unknown exception in JNI code {$module::$fname()}");
-        $default
+        throwJavaException(env, 0, method_name);
     }
+    $default
 }
 
 
@@ -1420,4 +1515,3 @@ if __name__ == "__main__":
     #print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
     generator = JavaWrapperGenerator()
     generator.gen(srcfiles, module, dstdir)
-

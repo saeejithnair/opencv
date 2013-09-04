@@ -3162,18 +3162,18 @@ void CvCaptureCAM_DShow::close()
 // Initialize camera input
 bool CvCaptureCAM_DShow::open( int _index )
 {
-    int try_index = _index;
     int devices = 0;
 
     close();
     devices = VI.listDevices(true);
     if (devices == 0)
         return false;
-    try_index = try_index < 0 ? 0 : (try_index > devices-1 ? devices-1 : try_index);
-    VI.setupDevice(try_index);
-    if( !VI.isDeviceSetup(try_index) )
+    if (_index < 0 || _index > devices-1)
         return false;
-    index = try_index;
+    VI.setupDevice(_index);
+    if( !VI.isDeviceSetup(_index) )
+        return false;
+    index = _index;
     return true;
 }
 
@@ -3193,8 +3193,10 @@ IplImage* CvCaptureCAM_DShow::retrieveFrame(int)
         frame = cvCreateImage( cvSize(w,h), 8, 3 );
     }
 
-    VI.getPixels( index, (uchar*)frame->imageData, false, true );
-    return frame;
+    if (VI.getPixels( index, (uchar*)frame->imageData, false, true ))
+        return frame;
+    else
+        return NULL;
 }
 
 double CvCaptureCAM_DShow::getProperty( int property_id )
