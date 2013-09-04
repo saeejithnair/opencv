@@ -6,7 +6,7 @@ Drawing Functions
 Drawing functions work with matrices/images of arbitrary depth.
 The boundaries of the shapes can be rendered with antialiasing (implemented only for 8-bit images for now).
 All the functions include the parameter ``color`` that uses an RGB value (that may be constructed
-with ``CV_RGB`` or the  :ocv:class:`Scalar_`  constructor
+with the ``Scalar``  constructor
 ) for color
 images and brightness for grayscale images. For color images, the channel ordering
 is normally *Blue, Green, Red*.
@@ -25,6 +25,10 @@ If a drawn figure is partially or completely outside the image, the drawing func
 :math:`\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})` . This feature is especially effective when rendering antialiased shapes.
 
 .. note:: The functions do not support alpha-transparency when the target image is 4-channel. In this case, the ``color[3]`` is simply copied to the repainted pixels. Thus, if you want to paint semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main image.
+
+.. note::
+
+   * An example on using variate drawing functions like line, rectangle, ... can be found at opencv_source_code/samples/cpp/drawing.cpp
 
 circle
 ----------
@@ -225,6 +229,8 @@ Calculates the width and height of a text string.
 
     :param text: Input text string.
 
+    :param text_string: Input text string in C format.
+
     :param fontFace: Font to use. See the  :ocv:func:`putText` for details.
 
     :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.
@@ -232,6 +238,12 @@ Calculates the width and height of a text string.
     :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.
 
     :param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
+
+    :param baseline: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
+
+    :param font: Font description in terms of old C API.
+
+    :param text_size: Output parameter - The size of a box that contains the specified text.
 
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: ::
@@ -338,16 +350,16 @@ Draws a line segment connecting two points.
 
     :param lineType: Type of the line:
 
-            * **8** (or omitted) - 8-connected line.
+            * **LINE_8** (or omitted) - 8-connected line.
 
-            * **4** - 4-connected line.
+            * **LINE_4** - 4-connected line.
 
-            * **CV_AA** - antialiased line.
+            * **LINE_AA** - antialiased line.
 
     :param shift: Number of fractional bits in the point coordinates.
 
 The function ``line`` draws the line segment between ``pt1`` and ``pt2`` points in the image. The line is clipped by the image boundaries. For non-antialiased lines with integer coordinates, the 8-connected or 4-connected Bresenham algorithm is used. Thick lines are drawn with rounding endings.
-Antialiased lines are drawn using Gaussian filtering. To specify the line color, you may use the macro ``CV_RGB(r, g, b)`` .
+Antialiased lines are drawn using Gaussian filtering.
 
 
 LineIterator
@@ -547,6 +559,12 @@ The function draws contour outlines in the image if
         waitKey(0);
     }
 
+.. note::
+
+   * An example using the drawContour functionality can be found at opencv_source_code/samples/cpp/contours2.cpp
+   * An example using drawContours to clean up a background segmentation result at opencv_source_code/samples/cpp/segment_objects.cpp
+
+   * (Python) An example using the drawContour functionality can be found at opencv_source/samples/python2/contours.py
 
 
 putText
@@ -584,4 +602,3 @@ The function ``putText`` renders the specified text string in the image.
 Symbols that cannot be rendered using the specified font are
 replaced by question marks. See
 :ocv:func:`getTextSize` for a text rendering code example.
-

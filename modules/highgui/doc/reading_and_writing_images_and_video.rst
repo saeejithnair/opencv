@@ -210,7 +210,7 @@ The class provides C++ API for capturing video from cameras or for reading video
         {
             Mat frame;
             cap >> frame; // get a new frame from camera
-            cvtColor(frame, edges, CV_BGR2GRAY);
+            cvtColor(frame, edges, COLOR_BGR2GRAY);
             GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
             Canny(edges, edges, 0, 30, 3);
             imshow("edges", edges);
@@ -222,6 +222,15 @@ The class provides C++ API for capturing video from cameras or for reading video
 
 
 .. note:: In C API the black-box structure ``CvCapture`` is used instead of ``VideoCapture``.
+
+.. note::
+
+   * A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/cpp/starter_video.cpp
+   * Another basic video processing sample can be found at opencv_source_code/samples/cpp/video_dmtx.cpp
+
+   * (Python) A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/python2/video.py
+   * (Python) Another basic video processing sample can be found at opencv_source_code/samples/python2/video_dmtx.py
+   * (Python) A multi threaded video processing sample can be found at opencv_source_code/samples/python2/video_threaded.py
 
 
 VideoCapture::VideoCapture
@@ -530,4 +539,3 @@ Writes the next video frame
     :param image: The written frame
 
 The functions/methods write the specified image to video file. It must have the same size as has been specified when opening the video writer.
-

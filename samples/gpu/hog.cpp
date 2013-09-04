@@ -7,6 +7,7 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/gpu.hpp"
 #include "opencv2/highgui.hpp"
+#include "opencv2/objdetect.hpp"
 
 using namespace std;
 using namespace cv;
@@ -457,4 +458,3 @@ inline string App::workFps() const
     ss << work_fps;
     return ss.str();
 }
-

@@ -113,24 +113,6 @@ struct Logger
 namespace cv
 {
 
-// class for grouping object candidates, detected by Cascade Classifier, HOG etc.
-// instance of the class is to be passed to cv::partition (see cxoperations.hpp)
-class CV_EXPORTS SimilarRects
-{
-public:
-    SimilarRects(double _eps) : eps(_eps) {}
-    inline bool operator()(const Rect& r1, const Rect& r2) const
-    {
-        double delta = eps*(std::min(r1.width, r2.width) + std::min(r1.height, r2.height))*0.5;
-        return std::abs(r1.x - r2.x) <= delta &&
-        std::abs(r1.y - r2.y) <= delta &&
-        std::abs(r1.x + r1.width - r2.x - r2.width) <= delta &&
-        std::abs(r1.y + r1.height - r2.y - r2.height) <= delta;
-    }
-    double eps;
-};
-
-
 void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps, std::vector<int>* weights, std::vector<double>* levelWeights)
 {
     if( groupThreshold <= 0 || rectList.empty() )
@@ -196,8 +178,11 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
     for( i = 0; i < nclasses; i++ )
     {
         Rect r1 = rrects[i];
-        int n1 = levelWeights ? rejectLevels[i] : rweights[i];
+        int n1 = rweights[i];
         double w1 = rejectWeights[i];
+        int l1 = rejectLevels[i];
+
+        // filter out rectangles which don't have enough similar rectangles
         if( n1 <= groupThreshold )
             continue;
         // filter out small face rectangles inside large rectangles
@@ -225,7 +210,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
         {
             rectList.push_back(r1);
             if( weights )
-                weights->push_back(n1);
+                weights->push_back(l1);
             if( levelWeights )
                 levelWeights->push_back(w1);
         }
@@ -988,7 +973,7 @@ public:
                 {
                     if( result == 1 )
                         result =  -(int)classifier->data.stages.size();
-                    if( classifier->data.stages.size() + result < 4 )
+                    if( classifier->data.stages.size() + result == 0 )
                     {
                         mtx->lock();
                         rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height));
@@ -1022,6 +1007,7 @@ public:
 };
 
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
+struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
 
 bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
@@ -1086,39 +1072,33 @@ bool CascadeClassifier::setImage(const Mat& image)
     return featureEvaluator->setImage(image, data.origWinSize);
 }
 
-void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
-                                          std::vector<int>& rejectLevels,
-                                          std::vector<double>& levelWeights,
-                                          double scaleFactor, int minNeighbors,
-                                          int flags, Size minObjectSize, Size maxObjectSize,
-                                          bool outputRejectLevels )
+static void detectMultiScaleOldFormat( const Mat& image, Ptr<CvHaarClassifierCascade> oldCascade,
+                                       std::vector<Rect>& objects,
+                                       std::vector<int>& rejectLevels,
+                                       std::vector<double>& levelWeights,
+                                       std::vector<CvAvgComp>& vecAvgComp,
+                                       double scaleFactor, int minNeighbors,
+                                       int flags, Size minObjectSize, Size maxObjectSize,
+                                       bool outputRejectLevels = false )
 {
-    const double GROUP_EPS = 0.2;
+    MemStorage storage(cvCreateMemStorage(0));
+    CvMat _image = image;
+    CvSeq* _objects = cvHaarDetectObjectsForROC( &_image, oldCascade, storage, rejectLevels, levelWeights, scaleFactor,
+                                                 minNeighbors, flags, minObjectSize, maxObjectSize, outputRejectLevels );
+    Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
+    objects.resize(vecAvgComp.size());
+    std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
+}
 
-    CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
+void CascadeClassifier::detectMultiScaleNoGrouping( const Mat& image, std::vector<Rect>& candidates,
+                                                    std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
+                                                    double scaleFactor, Size minObjectSize, Size maxObjectSize,
+                                                    bool outputRejectLevels )
+{
+    candidates.clear();
 
-    if( empty() )
-        return;
-
-    if( isOldFormatCascade() )
-    {
-        MemStorage storage(cvCreateMemStorage(0));
-        CvMat _image = image;
-        CvSeq* _objects = cvHaarDetectObjectsForROC( &_image, oldCascade, storage, rejectLevels, levelWeights, scaleFactor,
-                                              minNeighbors, flags, minObjectSize, maxObjectSize, outputRejectLevels );
-        std::vector<CvAvgComp> vecAvgComp;
-        Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
-        objects.resize(vecAvgComp.size());
-        std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
-        return;
-    }
-
-    objects.clear();
-
-    if (!maskGenerator.empty()) {
+    if (!maskGenerator.empty())
         maskGenerator->initializeMask(image);
-    }
-
 
     if( maxObjectSize.height == 0 || maxObjectSize.width == 0 )
         maxObjectSize = image.size();
@@ -1132,7 +1112,6 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
     }
 
     Mat imageBuffer(image.rows + 1, image.cols + 1, CV_8U);
-    std::vector<Rect> candidates;
 
     for( double factor = 1; ; factor *= scaleFactor )
     {
@@ -1164,32 +1143,48 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
 
         int stripCount, stripSize;
 
-    #ifdef HAVE_TBB
         const int PTS_PER_THREAD = 1000;
         stripCount = ((processingRectSize.width/yStep)*(processingRectSize.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
         stripCount = std::min(std::max(stripCount, 1), 100);
         stripSize = (((processingRectSize.height + stripCount - 1)/stripCount + yStep-1)/yStep)*yStep;
-    #else
-        stripCount = 1;
-        stripSize = processingRectSize.height;
-    #endif
 
         if( !detectSingleScale( scaledImage, stripCount, processingRectSize, stripSize, yStep, factor, candidates,
             rejectLevels, levelWeights, outputRejectLevels ) )
             break;
     }
+}
 
+void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+                                          std::vector<int>& rejectLevels,
+                                          std::vector<double>& levelWeights,
+                                          double scaleFactor, int minNeighbors,
+                                          int flags, Size minObjectSize, Size maxObjectSize,
+                                          bool outputRejectLevels )
+{
+    CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
 
-    objects.resize(candidates.size());
-    std::copy(candidates.begin(), candidates.end(), objects.begin());
+    if( empty() )
+        return;
 
-    if( outputRejectLevels )
+    if( isOldFormatCascade() )
     {
-        groupRectangles( objects, rejectLevels, levelWeights, minNeighbors, GROUP_EPS );
+        std::vector<CvAvgComp> fakeVecAvgComp;
+        detectMultiScaleOldFormat( image, oldCascade, objects, rejectLevels, levelWeights, fakeVecAvgComp, scaleFactor,
+                                   minNeighbors, flags, minObjectSize, maxObjectSize, outputRejectLevels );
     }
     else
     {
-        groupRectangles( objects, minNeighbors, GROUP_EPS );
+        detectMultiScaleNoGrouping( image, objects, rejectLevels, levelWeights, scaleFactor, minObjectSize, maxObjectSize,
+                                    outputRejectLevels );
+        const double GROUP_EPS = 0.2;
+        if( outputRejectLevels )
+        {
+            groupRectangles( objects, rejectLevels, levelWeights, minNeighbors, GROUP_EPS );
+        }
+        else
+        {
+            groupRectangles( objects, minNeighbors, GROUP_EPS );
+        }
     }
 }
 
@@ -1200,7 +1195,35 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
     std::vector<int> fakeLevels;
     std::vector<double> fakeWeights;
     detectMultiScale( image, objects, fakeLevels, fakeWeights, scaleFactor,
-        minNeighbors, flags, minObjectSize, maxObjectSize, false );
+        minNeighbors, flags, minObjectSize, maxObjectSize );
+}
+
+void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& objects,
+                                          std::vector<int>& numDetections, double scaleFactor,
+                                          int minNeighbors, int flags, Size minObjectSize,
+                                          Size maxObjectSize )
+{
+    CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
+
+    if( empty() )
+        return;
+
+    std::vector<int> fakeLevels;
+    std::vector<double> fakeWeights;
+    if( isOldFormatCascade() )
+    {
+        std::vector<CvAvgComp> vecAvgComp;
+        detectMultiScaleOldFormat( image, oldCascade, objects, fakeLevels, fakeWeights, vecAvgComp, scaleFactor,
+                                   minNeighbors, flags, minObjectSize, maxObjectSize );
+        numDetections.resize(vecAvgComp.size());
+        std::transform(vecAvgComp.begin(), vecAvgComp.end(), numDetections.begin(), getNeighbors());
+    }
+    else
+    {
+        detectMultiScaleNoGrouping( image, objects, fakeLevels, fakeWeights, scaleFactor, minObjectSize, maxObjectSize );
+        const double GROUP_EPS = 0.2;
+        groupRectangles( objects, numDetections, minNeighbors, GROUP_EPS );
+    }
 }
 
 bool CascadeClassifier::Data::read(const FileNode &root)

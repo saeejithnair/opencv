@@ -127,7 +127,7 @@ CV_EXPORTS void fastFree(void* ptr);
 /*!
   The STL-compilant memory Allocator based on cv::fastMalloc() and cv::fastFree()
 */
-template<typename _Tp> class CV_EXPORTS Allocator
+template<typename _Tp> class Allocator
 {
 public:
     typedef _Tp value_type;
@@ -183,7 +183,7 @@ public:
   \note{Another good property of the class is that the operations on the reference counter are atomic,
   i.e. it is safe to use the class in multi-threaded applications}
 */
-template<typename _Tp> class CV_EXPORTS Ptr
+template<typename _Tp> class Ptr
 {
 public:
     //! empty constructor
@@ -580,6 +580,8 @@ String::~String()
 inline
 String& String::operator=(const String& str)
 {
+    if (&str == this) return *this;
+
     deallocate();
     if (str.cstr_) CV_XADD(((int*)str.cstr_)-1, 1);
     cstr_ = str.cstr_;
