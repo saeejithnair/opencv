@@ -831,8 +831,6 @@ void FeatureHaar::generateRandomFeature( Size patchSize )
 bool FeatureHaar::eval( const Mat& image, Rect ROI, float* result )
 {
   *result = 0.0f;
-  cv::Point2i offset;
-  offset = cv::Point2i( ROI.x, ROI.y );
 
   // define the minimum size
   Size minSize = Size( 3, 3 );
@@ -879,9 +877,8 @@ bool FeatureHaar::eval( const Mat& image, Rect ROI, float* result )
 
   for ( int curArea = 0; curArea < m_numAreas; curArea++ )
   {
-    *result += (float) getSum(
-        image, ROI,
-        Rect( m_scaleAreas[curArea].x + offset.x, m_scaleAreas[curArea].y + offset.y, m_scaleAreas[curArea].width, m_scaleAreas[curArea].height ) )
+    *result += (float) getSum( image,
+                               Rect( m_scaleAreas[curArea].x, m_scaleAreas[curArea].y, m_scaleAreas[curArea].width, m_scaleAreas[curArea].height ) )
         * m_scaleWeights[curArea];
   }
 
@@ -898,23 +895,23 @@ bool FeatureHaar::eval( const Mat& image, Rect ROI, float* result )
   return true;
 }
 
-float FeatureHaar::getSum( const Mat& image, Rect m_ROI, Rect imageROI )
+float FeatureHaar::getSum( const Mat& image, Rect imageROI )
 {
   // left upper Origin
-  int OriginX = imageROI.x - m_ROI.x;
-  int OriginY = imageROI.y - m_ROI.y;
+  int OriginX = imageROI.x;
+  int OriginY = imageROI.y;
 
   // Check and fix width and height
   int Width = imageROI.width;
   int Height = imageROI.height;
 
-  if( OriginX + Width >= m_ROI.width )
-    Width = m_ROI.width - OriginX;
-  if( OriginY + Height >= m_ROI.height )
-    Height = m_ROI.height - OriginY;
+  if( OriginX + Width >= image.cols - 1 )
+    Width = ( image.cols - 1 ) - OriginX;
+  if( OriginY + Height >= image.rows - 1 )
+    Height = ( image.rows - 1 ) - OriginY;
 
-  int value = image.at<int>( OriginY + Height, OriginX + Width ) + image.at<int>( OriginY, OriginX )
-      - image.at<int>( OriginY, OriginX + Width ) - image.at<int>( OriginY + Height, OriginX );
+  int value = image.at<int>( OriginY + Height, OriginX + Width ) + image.at<int>( OriginY, OriginX ) - image.at<int>( OriginY, OriginX + Width )
+      - image.at<int>( OriginY + Height, OriginX );
 
   return value;
 }

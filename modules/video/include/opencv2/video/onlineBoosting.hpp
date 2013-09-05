@@ -177,7 +177,7 @@ class FeatureHaar
   float m_initSigma;
 
   void generateRandomFeature( Size imageSize );
-  float getSum( const Mat& image, Rect m_ROI, Rect imgROI );
+  float getSum( const Mat& image, Rect imgROI );
 
   std::vector<Rect> m_areas;  // areas within the patch over which to compute the feature
   cv::Size m_initSize;  // size of the patch used during training
