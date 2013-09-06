@@ -234,7 +234,7 @@ void CvHaarEvaluator::writeFeature( FileStorage &fs, int fi ) const
 
 void CvHaarEvaluator::generateFeatures()
 {
-  generateFeatures( 1 );
+  generateFeatures( featureParams->numFeatures );
 }
 
 void CvHaarEvaluator::generateFeatures( int nFeatures )
@@ -258,9 +258,9 @@ float CvHaarEvaluator::operator()( int featureIdx, int /*sampleIdx*/)
 {
   /* TODO Added from MIL implementation */
   //return features[featureIdx].calc( _ii_img, Mat(), 0 );
-  float *res;
-  features.at( featureIdx ).eval( _ii_img, Rect( 0, 0, winSize.width, winSize.height ), res );
-  return 0;
+  float res;
+  features.at( featureIdx ).eval( _ii_img, Rect( 0, 0, winSize.width, winSize.height ), &res );
+  return res;
 }
 
 void CvHaarEvaluator::setWinSize( Size patchSize )
