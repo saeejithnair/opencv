@@ -165,7 +165,6 @@ TrackerFeatureHAAR::TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parame
   className = "HAAR";
 
   CvHaarFeatureParams haarParams;
-  haarParams.mode = CvHaarFeatureParams::CORE;
   haarParams.numFeatures = params.numFeatures;
   haarParams.isIntegral = params.isIntegral;
   featureEvaluator = CvFeatureEvaluator::create( CvFeatureParams::HAAR );
