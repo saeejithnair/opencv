@@ -115,6 +115,8 @@ void TrackerMIL::write( cv::FileStorage& fs ) const
 
 bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 {
+  Mat intImage;
+  integral( image, intImage );
   TrackerSamplerCSC::Params CSCparameters;
   CSCparameters.initInRad = params.samplerInitInRadius;
   CSCparameters.searchWinSize = params.samplerSearchWinSize;
@@ -132,12 +134,12 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 
   //Positive sampling
   Ptr<TrackerSamplerCSC>( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_POS );
-  sampler->sampling( image, boundingBox );
+  sampler->sampling( intImage, boundingBox );
   std::vector<Mat> posSamples = sampler->getSamples();
 
   //Negative sampling
   Ptr<TrackerSamplerCSC>( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
-  sampler->sampling( image, boundingBox );
+  sampler->sampling( intImage, boundingBox );
   std::vector<Mat> negSamples = sampler->getSamples();
 
   if( posSamples.empty() || negSamples.empty() )
@@ -147,6 +149,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
   TrackerFeatureHAAR::Params HAARparameters;
   HAARparameters.numFeatures = params.featureSetNumFeatures;
   HAARparameters.rectSize = Size( boundingBox.width, boundingBox.height );
+  HAARparameters.isIntegral = true;
   Ptr<TrackerFeature> trackerFeature = new TrackerFeatureHAAR( HAARparameters );
   featureSet->addTrackerFeature( trackerFeature );
 
@@ -172,6 +175,9 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 
 bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 {
+  Mat intImage;
+  integral( image, intImage );
+
   //get the last location [AAM] X(k-1)
   Ptr<TrackerTargetState> lastLocation = model->getLastTargetState();
   Rect lastBoundingBox( lastLocation->getTargetPosition().x, lastLocation->getTargetPosition().y, lastLocation->getTargetWidth(),
@@ -179,7 +185,7 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 
   //sampling new frame based on last location
   ( (Ptr<TrackerSamplerCSC> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCSC::MODE_DETECT );
-  sampler->sampling( image, lastBoundingBox );
+  sampler->sampling( intImage, lastBoundingBox );
   std::vector<Mat> detectSamples = sampler->getSamples();
   if( detectSamples.empty() )
     return false;
@@ -224,12 +230,12 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
   //sampling new frame based on new location
   //Positive sampling
   ( (Ptr<TrackerSamplerCSC> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCSC::MODE_INIT_POS );
-  sampler->sampling( image, boundingBox );
+  sampler->sampling( intImage, boundingBox );
   std::vector<Mat> posSamples = sampler->getSamples();
 
   //Negative sampling
   ( (Ptr<TrackerSamplerCSC> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
-  sampler->sampling( image, boundingBox );
+  sampler->sampling( intImage, boundingBox );
   std::vector<Mat> negSamples = sampler->getSamples();
 
   if( posSamples.empty() || negSamples.empty() )
