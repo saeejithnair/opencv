@@ -249,6 +249,11 @@ void CvHaarEvaluator::generateFeatures( int nFeatures )
 
 }
 
+std::vector<CvHaarEvaluator::FeatureHaar> CvHaarEvaluator::getFeatures() const
+{
+  return features;
+}
+
 float CvHaarEvaluator::operator()( int featureIdx, int /*sampleIdx*/)
 {
   /* TODO Added from MIL implementation */
@@ -696,10 +701,10 @@ bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* resu
 {
   *result = 0.0f;
 
-  // define the minimum size
+// define the minimum size
   Size minSize = Size( 3, 3 );
 
-  // printf("in eval %d = %d\n",curSize.width,ROI.width );
+// printf("in eval %d = %d\n",curSize.width,ROI.width );
 
   if( m_curSize.width != ROI.width || m_curSize.height != ROI.height )
   {
@@ -735,6 +740,14 @@ bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* resu
       }
     }
   }
+  /*else
+   {
+   for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+   {
+   m_scaleAreas[curArea] = m_areas[curArea];
+   m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( m_areas[curArea].width * m_areas[curArea].height );
+   }
+   }*/
 
   if( m_scaleFactorWidth == 0.0f )
     return false;
@@ -761,11 +774,11 @@ bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* resu
 
 float CvHaarEvaluator::FeatureHaar::getSum( const Mat& image, Rect imageROI )
 {
-  // left upper Origin
+// left upper Origin
   int OriginX = imageROI.x;
   int OriginY = imageROI.y;
 
-  // Check and fix width and height
+// Check and fix width and height
   int Width = imageROI.width;
   int Height = imageROI.height;
 
@@ -831,12 +844,12 @@ CvHaarEvaluator::EstimatedGaussDistribution::~EstimatedGaussDistribution()
 
 void CvHaarEvaluator::EstimatedGaussDistribution::update( float value )
 {
-  //update distribution (mean and sigma) using a kalman filter for each
+//update distribution (mean and sigma) using a kalman filter for each
 
   float K;
   float minFactor = 0.001f;
 
-  //mean
+//mean
 
   K = m_P_mean / ( m_P_mean + m_R_mean );
   if( K < minFactor )

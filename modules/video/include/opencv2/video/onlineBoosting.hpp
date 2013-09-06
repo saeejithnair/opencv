@@ -133,63 +133,6 @@ class BaseClassifier
 
 };
 
-class FeatureHaar
-{
-
- public:
-
-  FeatureHaar( Size patchSize );
-
-  void getInitialDistribution( EstimatedGaussDistribution *distribution );
-
-  bool eval( const Mat& image, Rect ROI, float* result );
-
-  float getResponse()
-  {
-    return m_response;
-  }
-  ;
-
-  int getNumAreas()
-  {
-    return m_numAreas;
-  }
-  ;
-
-  const std::vector<int>& getWeights() const
-  {
-    return m_weights;
-  }
-  ;
-
-  const std::vector<Rect>& getAreas() const
-  {
-    return m_areas;
-  }
-  ;
-
- private:
-
-  int m_type;
-  int m_numAreas;
-  std::vector<int> m_weights;
-  float m_initMean;
-  float m_initSigma;
-
-  void generateRandomFeature( Size imageSize );
-  float getSum( const Mat& image, Rect imgROI );
-
-  std::vector<Rect> m_areas;  // areas within the patch over which to compute the feature
-  cv::Size m_initSize;  // size of the patch used during training
-  cv::Size m_curSize;  // size of the patches currently under investigation
-  float m_scaleFactorHeight;  // scaling factor in vertical direction
-  float m_scaleFactorWidth;  // scaling factor in horizontal direction
-  std::vector<Rect> m_scaleAreas;  // areas after scaling
-  std::vector<float> m_scaleWeights;  // weights after scaling
-  float m_response;
-
-};
-
 class WeakClassifierHaarFeature
 {
 
@@ -222,11 +165,12 @@ class WeakClassifierHaarFeature
 
  private:
 
-  FeatureHaar* m_feature;
+  Ptr<CvHaarEvaluator> m_feature;
   ClassifierThreshold* m_classifier;
 
   void
-  generateRandomClassifier();
+  generateRandomClassifier( CvHaarEvaluator::EstimatedGaussDistribution* m_posSamples,
+                            CvHaarEvaluator::EstimatedGaussDistribution* m_negSamples );
 
 };
 
@@ -302,7 +246,7 @@ class ClassifierThreshold
 {
  public:
 
-  ClassifierThreshold();
+  ClassifierThreshold( CvHaarEvaluator::EstimatedGaussDistribution* posSamples, CvHaarEvaluator::EstimatedGaussDistribution* negSamples );
   virtual ~ClassifierThreshold();
 
   void update( float value, int target );
@@ -312,35 +256,11 @@ class ClassifierThreshold
 
  private:
 
-  EstimatedGaussDistribution* m_posSamples;
-  EstimatedGaussDistribution* m_negSamples;
+  CvHaarEvaluator::EstimatedGaussDistribution* m_posSamples;
+  CvHaarEvaluator::EstimatedGaussDistribution* m_negSamples;
 
   float m_threshold;
   int m_parity;
-};
-
-class EstimatedGaussDistribution
-{
- public:
-
-  EstimatedGaussDistribution();
-  EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma );
-  virtual ~EstimatedGaussDistribution();
-
-  void update( float value );  //, float timeConstant = -1.0);
-
-  float getMean();
-  float getSigma();
-  void setValues( float mean, float sigma );
-
- private:
-
-  float m_mean;
-  float m_sigma;
-  float m_P_mean;
-  float m_P_sigma;
-  float m_R_mean;
-  float m_R_sigma;
 };
 
 } /* namespace cv */

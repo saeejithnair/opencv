@@ -213,35 +213,6 @@ class CvHaarFeatureParams : public CvFeatureParams
 class CvHaarEvaluator : public CvFeatureEvaluator
 {
  public:
-  virtual void init( const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize );
-  virtual void setImage( const Mat& img, uchar clsLabel = 0, int idx = 1 );
-  virtual float operator()( int featureIdx, int sampleIdx );
-  virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
-  void writeFeature( FileStorage &fs, int fi ) const;  // for old file format
-
-  void setWinSize( Size patchSize );
-  Size setWinSize( ) const;
- protected:
-  bool isIntegral;
-
-  /* TODO Added from MIL implementation */
-  Mat _ii_img;
-  void compute_integral( const cv::Mat & img, std::vector<cv::Mat_<float> > & ii_imgs )
-  {
-    Mat ii_img;
-    integral( img, ii_img, CV_32F );
-    split( ii_img, ii_imgs );
-  }
-
-  virtual void generateFeatures();
-
-  /**
-   * TODO new method
-   * \brief Overload the original generateFeatures in order to limit the number of the features
-   * @param numFeatures Number of the features
-   */
-
-  virtual void generateFeatures( int numFeatures );
 
   class EstimatedGaussDistribution
   {
@@ -271,7 +242,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
    public:
 
     FeatureHaar( Size patchSize );
-    void getInitialDistribution( EstimatedGaussDistribution *distribution );
+    void getInitialDistribution( CvHaarEvaluator::EstimatedGaussDistribution *distribution );
     bool eval( const Mat& image, Rect ROI, float* result );
     float getResponse();
     int getNumAreas();
@@ -297,10 +268,40 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     float m_response;
 
   };
+
+  virtual void init( const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize );
+  virtual void setImage( const Mat& img, uchar clsLabel = 0, int idx = 1 );
+  virtual float operator()( int featureIdx, int sampleIdx );
+  virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
+  void writeFeature( FileStorage &fs, int fi ) const;  // for old file format
+  std::vector<CvHaarEvaluator::FeatureHaar> getFeatures() const;
+  void setWinSize( Size patchSize );
+  Size setWinSize() const;
+ protected:
+  bool isIntegral;
+
+  /* TODO Added from MIL implementation */
+  Mat _ii_img;
+  void compute_integral( const cv::Mat & img, std::vector<cv::Mat_<float> > & ii_imgs )
+  {
+    Mat ii_img;
+    integral( img, ii_img, CV_32F );
+    split( ii_img, ii_imgs );
+  }
+
+  virtual void generateFeatures();
+
+  /**
+   * TODO new method
+   * \brief Overload the original generateFeatures in order to limit the number of the features
+   * @param numFeatures Number of the features
+   */
+
+  virtual void generateFeatures( int numFeatures );
+
   std::vector<FeatureHaar> features;
   Mat sum; /* sum images (each row represents image) */
 };
-
 
 struct CvHOGFeatureParams : public CvFeatureParams
 {
