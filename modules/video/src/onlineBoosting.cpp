@@ -457,7 +457,7 @@ bool WeakClassifierHaarFeature::update( const Mat& image, Rect ROI, int target )
 int WeakClassifierHaarFeature::eval( const Mat& image, Rect ROI )
 {
   float value;
-  bool valid = m_feature->getFeatures().at( 0 ).eval( image, ROI, &value );
+  bool valid = m_feature->getFeatures(0).eval( image, ROI, &value );
   if( !valid )
     return 0;
 

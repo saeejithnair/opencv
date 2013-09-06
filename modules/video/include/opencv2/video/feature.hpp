@@ -248,7 +248,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     int getNumAreas();
     const std::vector<int>& getWeights() const;
     const std::vector<Rect>& getAreas() const;
-    void write( FileStorage &fs ) const;
+    void write( FileStorage &fs ) const {};
 
    private:
     int m_type;
@@ -275,6 +275,10 @@ class CvHaarEvaluator : public CvFeatureEvaluator
   virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
   void writeFeature( FileStorage &fs, int fi ) const;  // for old file format
   std::vector<CvHaarEvaluator::FeatureHaar> getFeatures() const;
+  inline CvHaarEvaluator::FeatureHaar& getFeatures(int idx)
+  {
+    return features[idx];
+  }
   void setWinSize( Size patchSize );
   Size setWinSize() const;
  protected:
