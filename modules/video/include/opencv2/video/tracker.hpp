@@ -536,7 +536,10 @@ class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimat
     /**
      * \brief Destructor
      */
-    ~TrackerMILTargetState(){};
+    ~TrackerMILTargetState()
+    {
+    }
+    ;
 
     /**
      * setters and getters

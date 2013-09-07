@@ -52,8 +52,8 @@ namespace cv
 {
 
 /*
- * TODO This is a copy from apps/traincascade/
- * TODO Changed CvHaarEvaluator based on MIL implementation
+ * TODO This implementation is based on apps/traincascade/
+ * TODO Changed CvHaarEvaluator based on ADABOOSTING implementation (Grabner et al.)
  */
 
 CvParams::CvParams() :
