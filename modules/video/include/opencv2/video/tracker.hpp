@@ -791,6 +791,7 @@ class CV_EXPORTS_W TrackerMIL : public Tracker
 
   bool initImpl( const Mat& image, const Rect& boundingBox );
   bool updateImpl( const Mat& image, Rect& boundingBox );
+  void compute_integral( const Mat & img, Mat & ii_img );
 
   Params params;
   AlgorithmInfo* info() const;

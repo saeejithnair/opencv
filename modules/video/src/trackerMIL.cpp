@@ -113,10 +113,19 @@ void TrackerMIL::write( cv::FileStorage& fs ) const
   params.write( fs );
 }
 
+void TrackerMIL::compute_integral( const Mat & img, Mat & ii_img )
+{
+  Mat ii;
+  std::vector<Mat> ii_imgs;
+  integral( img, ii, CV_32F );
+  split( ii, ii_imgs );
+  ii_img = ii_imgs[0];
+}
+
 bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 {
   Mat intImage;
-  integral( image, intImage );
+  compute_integral( image, intImage );
   TrackerSamplerCSC::Params CSCparameters;
   CSCparameters.initInRad = params.samplerInitInRadius;
   CSCparameters.searchWinSize = params.samplerSearchWinSize;
@@ -176,7 +185,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 {
   Mat intImage;
-  integral( image, intImage );
+  compute_integral( image, intImage );
 
   //get the last location [AAM] X(k-1)
   Ptr<TrackerTargetState> lastLocation = model->getLastTargetState();
