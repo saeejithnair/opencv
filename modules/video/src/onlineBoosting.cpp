@@ -64,7 +64,7 @@ StrongClassifierDirectSelection::StrongClassifierDirectSelection( int numBaseClf
   for ( int curBaseClassifier = 1; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
     baseClassifier[curBaseClassifier] = new BaseClassifier( numWeakClf, iterationInit, baseClassifier[0]->getReferenceWeakClassifier() );
 
-  m_errorMask = new bool[numAllWeakClassifier];
+  m_errorMask.resize( numAllWeakClassifier );
   m_errors.resize( numAllWeakClassifier );
   m_sumErrors.resize( numAllWeakClassifier );
 
@@ -125,7 +125,7 @@ float StrongClassifierDirectSelection::classifySmooth( const std::vector<Mat>& i
 
 bool StrongClassifierDirectSelection::update( const Mat& image, Rect ROI, int target, float importance )
 {
-  memset( m_errorMask, 0, numAllWeakClassifier * sizeof(bool) );
+  m_errorMask.assign( numAllWeakClassifier, 0 );
   m_errors.assign( numAllWeakClassifier, 0 );
   m_sumErrors.assign( numAllWeakClassifier, 0 );
 
@@ -256,7 +256,7 @@ float BaseClassifier::getValue( const Mat& image, Rect ROI, int weakClassifierId
   return weakClassifier[weakClassifierIdx]->getValue( image, ROI );
 }
 
-void BaseClassifier::trainClassifier( const Mat& image, Rect ROI, int target, float importance, bool* errorMask )
+void BaseClassifier::trainClassifier( const Mat& image, Rect ROI, int target, float importance, std::vector<bool>& errorMask )
 {
 
   //get poisson value
@@ -292,7 +292,7 @@ float BaseClassifier::getError( int curWeakClassifier )
   return m_wWrong[curWeakClassifier] / ( m_wWrong[curWeakClassifier] + m_wCorrect[curWeakClassifier] );
 }
 
-int BaseClassifier::selectBestClassifier( bool* errorMask, float importance, std::vector<float> & errors )
+int BaseClassifier::selectBestClassifier( std::vector<bool>& errorMask, float importance, std::vector<float> & errors )
 {
   float minError = FLT_MAX;
   int tmp_selectedClassifier = m_selectedClassifier;

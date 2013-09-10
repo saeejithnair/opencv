@@ -82,7 +82,7 @@ class StrongClassifierDirectSelection
   bool useFeatureExchange;
 
   //StrongClassifierDirectSelection
-  bool * m_errorMask;
+  std::vector<bool> m_errorMask;
   std::vector<float> m_errors;
   std::vector<float> m_sumErrors;
 
@@ -103,8 +103,8 @@ class BaseClassifier
     return weakClassifier;
   }
   ;
-  void trainClassifier( const Mat& image, Rect ROI, int target, float importance, bool* errorMask );
-  int selectBestClassifier( bool* errorMask, float importance, std::vector<float> & errors );
+  void trainClassifier( const Mat& image, Rect ROI, int target, float importance, std::vector<bool>& errorMask );
+  int selectBestClassifier( std::vector<bool>& errorMask, float importance, std::vector<float> & errors );
   int replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
   void replaceClassifierStatistic( int sourceIndex, int targetIndex );
   int getIdxOfNewWeakClassifier()
