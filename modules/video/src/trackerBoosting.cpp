@@ -57,13 +57,16 @@ TrackerBoosting::Params::Params()
   numClassifiers = 100;
   samplerOverlap = 0.99f;
   samplerSearchFactor = 2;
-  featureSetNumFeatures = 1050;
+  iterationInit = 50;
+  featureSetNumFeatures = ( numClassifiers * 10 ) + iterationInit;
 }
 
 void TrackerBoosting::Params::read( const cv::FileNode& fn )
 {
   numClassifiers = fn["numClassifiers"];
   samplerOverlap = fn["overlap"];
+  samplerSearchFactor = fn["samplerSearchFactor"];
+  iterationInit = fn["iterationInit"];
   samplerSearchFactor = fn["searchFactor"];
 }
 
@@ -72,6 +75,8 @@ void TrackerBoosting::Params::write( cv::FileStorage& fs ) const
   fs << "numClassifiers" << numClassifiers;
   fs << "overlap" << samplerOverlap;
   fs << "searchFactor" << samplerSearchFactor;
+  fs << "iterationInit" << iterationInit;
+  fs << "samplerSearchFactor" << samplerSearchFactor;
 }
 
 /*
@@ -143,7 +148,7 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   */
   //Model
   model = new TrackerBoostingModel( boundingBox );
-  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting( params.numClassifiers, params.featureSetNumFeatures,
+  Ptr<TrackerStateEstimatorAdaBoosting> stateEstimator = new TrackerStateEstimatorAdaBoosting( params.numClassifiers, params.iterationInit, params.featureSetNumFeatures,
                                                                                                Size( boundingBox.width, boundingBox.height ), ROI );
   model->setTrackerStateEstimator( stateEstimator );
 

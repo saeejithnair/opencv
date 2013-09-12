@@ -616,7 +616,7 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
 
   };
 
-  TrackerStateEstimatorAdaBoosting( int numClassifer, int nFeatures, Size patchSize, const Rect& ROI );
+  TrackerStateEstimatorAdaBoosting( int numClassifer, int initIterations, int nFeatures, Size patchSize, const Rect& ROI );
   ~TrackerStateEstimatorAdaBoosting();
 
   Rect getSampleROI() const;
@@ -632,6 +632,7 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
 
  private:
   int numBaseClassifier;
+  int iterationInit;
   int numFeatures;
   bool trained;
   Size initPatchSize;
@@ -860,6 +861,7 @@ class CV_EXPORTS_W TrackerBoosting : public Tracker
     int numClassifiers;  //the number of classifiers to use in a OnlineBoosting algorithm
     float samplerOverlap;  //search region parameters to use in a OnlineBoosting algorithm
     float samplerSearchFactor;  // search region parameters to use in a OnlineBoosting algorithm
+    int iterationInit;  //the initial iterations
     int featureSetNumFeatures;  // #features
     /**
      * \brief Read parameters from file

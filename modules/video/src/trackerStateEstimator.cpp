@@ -244,11 +244,12 @@ void TrackerStateEstimatorMILBoosting::updateImpl( std::vector<ConfidenceMap>& c
 /**
  * TrackerStateEstimatorAdaBoosting
  */
-TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClassifer, int nFeatures, Size patchSize, const Rect& ROI )
+TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClassifer, int initIterations, int nFeatures, Size patchSize, const Rect& ROI )
 {
   className = "ADABOOSTING";
   numBaseClassifier = numClassifer;
   numFeatures = nFeatures;
+  iterationInit = initIterations;
   initPatchSize = patchSize;
   trained = false;
   sampleROI = ROI;
@@ -339,11 +340,10 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     //this is the first time that the classifier is built
     int numWeakClassifier = numBaseClassifier * 10;
     bool useFeatureExchange = true;
-    int iterationInit = 50;
     boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange,
                                                            iterationInit );
     trained = true;
-    iterations = 50;
+    iterations = iterationInit;
   }
   else
   {
