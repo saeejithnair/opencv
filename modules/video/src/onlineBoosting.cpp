@@ -51,18 +51,13 @@ StrongClassifierDirectSelection::StrongClassifierDirectSelection( int numBaseClf
   //StrongClassifier
   numBaseClassifier = numBaseClf;
   numAllWeakClassifier = numWeakClf + iterationInit;
+  iterInit = iterationInit;
+  numWeakClassifier = numWeakClf;
 
   alpha.assign( numBaseClf, 0 );
 
   patchSize = patchSz;
   useFeatureExchange = useFeatureEx;
-
-  //StrongClassifierDirectSelection
-  baseClassifier = new BaseClassifier*[numBaseClassifier];
-  baseClassifier[0] = new BaseClassifier( numWeakClf, iterationInit, patchSize );
-
-  for ( int curBaseClassifier = 1; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
-    baseClassifier[curBaseClassifier] = new BaseClassifier( numWeakClf, iterationInit, baseClassifier[0]->getReferenceWeakClassifier() );
 
   m_errorMask.resize( numAllWeakClassifier );
   m_errors.resize( numAllWeakClassifier );
@@ -70,6 +65,15 @@ StrongClassifierDirectSelection::StrongClassifierDirectSelection( int numBaseClf
 
   ROI = sampleROI;
   detector = new Detector( this );
+}
+
+void StrongClassifierDirectSelection::initBaseClassifier( const std::vector<std::pair<float, float> >& meanSigmaPairs )
+{
+  baseClassifier = new BaseClassifier*[numBaseClassifier];
+  baseClassifier[0] = new BaseClassifier( numWeakClassifier, iterInit, patchSize, meanSigmaPairs );
+
+  for ( int curBaseClassifier = 1; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
+    baseClassifier[curBaseClassifier] = new BaseClassifier( numWeakClassifier, iterInit, baseClassifier[0]->getReferenceWeakClassifier() );
 }
 
 StrongClassifierDirectSelection::~StrongClassifierDirectSelection()
@@ -108,17 +112,6 @@ float StrongClassifierDirectSelection::classifySmooth( const std::vector<Mat>& i
   }
   idx = detector->getPatchIdxOfBestDetection();
   confidence = detector->getConfidenceOfBestDetection();
-  /*
-   classifier->update( image, patches->getSpecialRect( "UpperLeft" ), -1 );
-   classifier->update( image, trackedPatch, 1 );
-   classifier->update( image, patches->getSpecialRect( "UpperRight" ), -1 );
-   classifier->update( image, trackedPatch, 1 );
-   classifier->update( image, patches->getSpecialRect( "LowerLeft" ), -1 );
-   classifier->update( image, trackedPatch, 1 );
-   classifier->update( image, patches->getSpecialRect( "LowerRight" ), -1 );
-   classifier->update( image, trackedPatch, 1 );
-
-   return true;*/
 
   return confidence;
 }
@@ -170,6 +163,17 @@ bool StrongClassifierDirectSelection::update( const Mat& image, Rect ROI, int ta
   return true;
 }
 
+std::vector<int> StrongClassifierDirectSelection::getSelectedWeakClassifier()
+{
+  std::vector<int> selected;
+  int curBaseClassifier = 0;
+  for ( curBaseClassifier = 0; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
+  {
+    selected.push_back( baseClassifier[curBaseClassifier]->getSelectedClassifier() );
+  }
+  return selected;
+}
+
 float StrongClassifierDirectSelection::eval( const Mat& response, Rect ROI )
 {
   float value = 0.0f;
@@ -186,7 +190,8 @@ int StrongClassifierDirectSelection::getNumBaseClassifier()
   return numBaseClassifier;
 }
 
-BaseClassifier::BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize )
+BaseClassifier::BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize,
+                                const std::vector<std::pair<float, float> >& meanSigmaPairs )
 {
   this->m_numWeakClassifier = numWeakClassifier;
   this->m_iterationInit = iterationInit;
@@ -194,7 +199,7 @@ BaseClassifier::BaseClassifier( int numWeakClassifier, int iterationInit, Size p
   weakClassifier = new WeakClassifierHaarFeature*[numWeakClassifier + iterationInit];
   m_idxOfNewWeakClassifier = numWeakClassifier;
 
-  generateRandomClassifier( patchSize );
+  generateRandomClassifier( patchSize, meanSigmaPairs );
 
   m_referenceWeakClassifier = false;
   m_selectedClassifier = 0;
@@ -236,24 +241,27 @@ BaseClassifier::~BaseClassifier()
   m_wWrong.clear();
 }
 
-void BaseClassifier::generateRandomClassifier( Size patchSize )
+void BaseClassifier::generateRandomClassifier( Size patchSize, const std::vector<std::pair<float, float> >& meanSigmaPairs )
 {
+  if( meanSigmaPairs.size() != m_numWeakClassifier + m_iterationInit )
+  {
+    CV_Error( -1, "The size of meanSigmaPairs is different from number of weak classifiers" );
+  }
   for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
   {
-    weakClassifier[curWeakClassifier] = new WeakClassifierHaarFeature( patchSize );
+    weakClassifier[curWeakClassifier] = new WeakClassifierHaarFeature( meanSigmaPairs.at( curWeakClassifier ).first,
+                                                                       meanSigmaPairs.at( curWeakClassifier ).second );
   }
 }
 
 int BaseClassifier::eval( const Mat& image, Rect ROI )
 {
-  return weakClassifier[m_selectedClassifier]->eval( image, ROI );
+  return weakClassifier[m_selectedClassifier]->eval( image.at<float>( m_selectedClassifier ) );
 }
 
-float BaseClassifier::getValue( const Mat& image, Rect ROI, int weakClassifierIdx )
+int BaseClassifier::getSelectedClassifier() const
 {
-  if( weakClassifierIdx < 0 || weakClassifierIdx >= m_numWeakClassifier )
-    return weakClassifier[m_selectedClassifier]->getValue( image, ROI );
-  return weakClassifier[weakClassifierIdx]->getValue( image, ROI );
+  return m_selectedClassifier;
 }
 
 void BaseClassifier::trainClassifier( const Mat& image, Rect ROI, int target, float importance, std::vector<bool>& errorMask )
@@ -275,14 +283,8 @@ void BaseClassifier::trainClassifier( const Mat& image, Rect ROI, int target, fl
   for ( int curK = 0; curK <= K; curK++ )
     for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
     {
-      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( image, ROI, target );
+      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( image.at<float>( curWeakClassifier, 0 ), target );
     }
-}
-
-void BaseClassifier::getErrorMask( const Mat& image, Rect ROI, int target, bool* errorMask )
-{
-  for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
-    errorMask[curWeakClassifier] = ( weakClassifier[curWeakClassifier]->eval( image, ROI ) != target );
 }
 
 float BaseClassifier::getError( int curWeakClassifier )
@@ -383,7 +385,8 @@ int BaseClassifier::replaceWeakestClassifier( const std::vector<float> & errors,
     m_wCorrect[index] = m_wCorrect[m_idxOfNewWeakClassifier];
     m_wCorrect[m_idxOfNewWeakClassifier] = 1;
 
-    weakClassifier[m_idxOfNewWeakClassifier] = new WeakClassifierHaarFeature( patchSize );
+    //TODO compute mean and sigma from model
+    weakClassifier[m_idxOfNewWeakClassifier] = new WeakClassifierHaarFeature( 0, 0 );
 
     return index;
   }
@@ -405,85 +408,112 @@ void BaseClassifier::replaceClassifierStatistic( int sourceIndex, int targetInde
   m_wCorrect[sourceIndex] = 1.0f;
 }
 
-#define SQROOTHALF 0.7071
-
-WeakClassifierHaarFeature::WeakClassifierHaarFeature( Size patchSize )
+EstimatedGaussDistribution::EstimatedGaussDistribution()
 {
-  CvHaarFeatureParams haarParams;
-  haarParams.numFeatures = 1;
-  haarParams.isIntegral = true;
-  m_feature = CvFeatureEvaluator::create( CvFeatureParams::HAAR );
-  m_feature->init( &haarParams, 1, patchSize );
-
-  CvHaarEvaluator::EstimatedGaussDistribution* m_posSamples = new CvHaarEvaluator::EstimatedGaussDistribution();
-  CvHaarEvaluator::EstimatedGaussDistribution* m_negSamples = new CvHaarEvaluator::EstimatedGaussDistribution();
-  generateRandomClassifier( m_posSamples, m_negSamples );
-
-  m_feature->getFeatures().at( 0 ).getInitialDistribution( (CvHaarEvaluator::EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
-  m_feature->getFeatures().at( 0 ).getInitialDistribution( (CvHaarEvaluator::EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );
+  m_mean = 0;
+  m_sigma = 1;
+  this->m_P_mean = 1000;
+  this->m_R_mean = 0.01f;
+  this->m_P_sigma = 1000;
+  this->m_R_sigma = 0.01f;
 }
 
-void WeakClassifierHaarFeature::resetPosDist()
+EstimatedGaussDistribution::EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma )
 {
-  m_feature->getFeatures().at( 0 ).getInitialDistribution( (CvHaarEvaluator::EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );
-  m_feature->getFeatures().at( 0 ).getInitialDistribution( (CvHaarEvaluator::EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
+  m_mean = 0;
+  m_sigma = 1;
+  this->m_P_mean = P_mean;
+  this->m_R_mean = R_mean;
+  this->m_P_sigma = P_sigma;
+  this->m_R_sigma = R_sigma;
+}
+
+EstimatedGaussDistribution::~EstimatedGaussDistribution()
+{
+}
+
+void EstimatedGaussDistribution::update( float value )
+{
+//update distribution (mean and sigma) using a kalman filter for each
+
+  float K;
+  float minFactor = 0.001f;
+
+//mean
+
+  K = m_P_mean / ( m_P_mean + m_R_mean );
+  if( K < minFactor )
+    K = minFactor;
+
+  m_mean = K * value + ( 1.0f - K ) * m_mean;
+  m_P_mean = m_P_mean * m_R_mean / ( m_P_mean + m_R_mean );
+
+  K = m_P_sigma / ( m_P_sigma + m_R_sigma );
+  if( K < minFactor )
+    K = minFactor;
+
+  float tmp_sigma = K * ( m_mean - value ) * ( m_mean - value ) + ( 1.0f - K ) * m_sigma * m_sigma;
+  m_P_sigma = m_P_sigma * m_R_mean / ( m_P_sigma + m_R_sigma );
+
+  m_sigma = static_cast<float>( sqrt( tmp_sigma ) );
+  if( m_sigma <= 1.0f )
+    m_sigma = 1.0f;
+
+}
+
+void EstimatedGaussDistribution::setValues( float mean, float sigma )
+{
+  this->m_mean = mean;
+  this->m_sigma = sigma;
+}
+
+float EstimatedGaussDistribution::getMean()
+{
+  return m_mean;
+}
+
+float EstimatedGaussDistribution::getSigma()
+{
+  return m_sigma;
+}
+
+WeakClassifierHaarFeature::WeakClassifierHaarFeature( float featureMean, float featureSigma )
+{
+  sigma = featureSigma;
+  mean = featureMean;
+
+  EstimatedGaussDistribution* m_posSamples = new EstimatedGaussDistribution();
+  EstimatedGaussDistribution* m_negSamples = new EstimatedGaussDistribution();
+  generateRandomClassifier( m_posSamples, m_negSamples );
+
+  getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( -1 ) );
+  getInitialDistribution( (EstimatedGaussDistribution*) m_classifier->getDistribution( 1 ) );
 }
 
 WeakClassifierHaarFeature::~WeakClassifierHaarFeature()
 {
-  m_feature.release();
   delete m_classifier;
-
 }
 
-void WeakClassifierHaarFeature::generateRandomClassifier( CvHaarEvaluator::EstimatedGaussDistribution* m_posSamples,
-                                                          CvHaarEvaluator::EstimatedGaussDistribution* m_negSamples )
+void WeakClassifierHaarFeature::getInitialDistribution( EstimatedGaussDistribution* distribution )
+{
+  distribution->setValues( mean, sigma );
+}
+
+void WeakClassifierHaarFeature::generateRandomClassifier( EstimatedGaussDistribution* m_posSamples, EstimatedGaussDistribution* m_negSamples )
 {
   m_classifier = new ClassifierThreshold( m_posSamples, m_negSamples );
 }
 
-bool WeakClassifierHaarFeature::update( const Mat& image, Rect ROI, int target )
+bool WeakClassifierHaarFeature::update( float value, int target )
 {
-  float value;
-
-  bool valid = m_feature->getFeatures().at( 0 ).eval( image, ROI, &value );
-  if( !valid )
-    return true;
-
   m_classifier->update( value, target );
   return ( m_classifier->eval( value ) != target );
 }
 
-int WeakClassifierHaarFeature::eval( const Mat& image, Rect ROI )
+int WeakClassifierHaarFeature::eval( float value )
 {
-  float value;
-  bool valid = m_feature->getFeatures(0).eval( image, ROI, &value );
-  if( !valid )
-    return 0;
-
   return m_classifier->eval( value );
-}
-
-float WeakClassifierHaarFeature::getValue( const Mat& image, Rect ROI )
-{
-  float value;
-  bool valid = m_feature->getFeatures().at( 0 ).eval( image, ROI, &value );
-  if( !valid )
-    return 0;
-
-  return value;
-}
-
-EstimatedGaussDistribution*
-WeakClassifierHaarFeature::getPosDistribution()
-{
-  return static_cast<EstimatedGaussDistribution*>( m_classifier->getDistribution( 1 ) );
-}
-
-EstimatedGaussDistribution*
-WeakClassifierHaarFeature::getNegDistribution()
-{
-  return static_cast<EstimatedGaussDistribution*>( m_classifier->getDistribution( -1 ) );
 }
 
 Detector::Detector( StrongClassifierDirectSelection* classifier ) :
@@ -645,8 +675,7 @@ int Detector::getPatchIdxOfDetection( int detectionIdx )
   return m_idxDetections[detectionIdx];
 }
 
-ClassifierThreshold::ClassifierThreshold( CvHaarEvaluator::EstimatedGaussDistribution* posSamples,
-                                          CvHaarEvaluator::EstimatedGaussDistribution* negSamples )
+ClassifierThreshold::ClassifierThreshold( EstimatedGaussDistribution* posSamples, EstimatedGaussDistribution* negSamples )
 {
   m_posSamples = posSamples;
   m_negSamples = negSamples;

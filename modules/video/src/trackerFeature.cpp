@@ -169,12 +169,56 @@ TrackerFeatureHAAR::TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parame
   haarParams.isIntegral = params.isIntegral;
   featureEvaluator = CvFeatureEvaluator::create( CvFeatureParams::HAAR );
   featureEvaluator->init( &haarParams, 1, params.rectSize );
+  meanSigmaPairs = featureEvaluator->getMeanSigmaPairs();
 }
 
 TrackerFeatureHAAR::~TrackerFeatureHAAR()
 {
 
 }
+
+std::vector<std::pair<float, float> >& TrackerFeatureHAAR::getMeanSigmaPairs()
+{
+  return meanSigmaPairs;
+}
+
+
+bool TrackerFeatureHAAR::extractSelected( const std::vector<int> selFeatures, const std::vector<Mat>& images, Mat& response )
+{
+  if( images.empty() )
+  {
+    return false;
+  }
+
+  int numFeatures = featureEvaluator->getNumFeatures();
+  int numSelFeatures = selFeatures.size();
+
+  //response = Mat_<float>( Size( images.size(), numFeatures ) );
+  response.create( Size( images.size(), numFeatures ), CV_32F );
+  response.setTo(0);
+
+  //double t = getTickCount();
+  //for each sample compute #n_feature -> put each feature (n Rect) in response
+  for ( size_t i = 0; i < images.size(); i++ )
+  {
+    int c = images[i].cols;
+    int r = images[i].rows;
+    for ( int j = 0; j < numSelFeatures; j++ )
+    {
+      float res = 0;
+      //const feat
+      CvHaarEvaluator::FeatureHaar& feature =  featureEvaluator->getFeatures( selFeatures[j] );
+      feature.eval( images[i], Rect( 0, 0, c, r ), &res );
+      //( Mat_<float>( response ) )( j, i ) = res;
+      response.at<float>( selFeatures[j], i ) = res;
+    }
+  }
+  //t = ( (double) getTickCount() - t ) / getTickFrequency();
+  //std::cout << "StrongClassifierDirectSelection time " << t << std::endl;
+
+  return true;
+}
+//TODO add return pair mean/sigma
 
 bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
@@ -186,15 +230,19 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
   int numFeatures = featureEvaluator->getNumFeatures();
 
   response = Mat_<float>( Size( images.size(), numFeatures ) );
+  //response.create( Size( images.size(), numFeatures ), CV_32F );
 
   //for each sample compute #n_feature -> put each feature (n Rect) in response
   for ( size_t i = 0; i < images.size(); i++ )
   {
+    int c = images[i].cols;
+    int r = images[i].rows;
     for ( int j = 0; j < numFeatures; j++ )
     {
       float res = 0;
-      featureEvaluator->getFeatures( j ).eval( images[i], Rect( 0, 0, images[i].cols, images[i].rows ), &res );
+      featureEvaluator->getFeatures( j ).eval( images[i], Rect( 0, 0, c, r ), &res );
       ( Mat_<float>( response ) )( j, i ) = res;
+      //response.at<float>( j, i ) = res;
     }
   }
 

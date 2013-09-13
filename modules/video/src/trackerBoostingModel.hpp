@@ -85,6 +85,12 @@ class TrackerBoostingModel : public TrackerModel
    */
   void responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap );
 
+  /**
+   * \brief return the selected weak classifiers for the detect
+   * @return the selected weak classifiers
+   */
+  std::vector<int> getSelectedWeakClassifier();
+
  protected:
   void modelEstimationImpl( const std::vector<Mat>& responses );
   void modelUpdateImpl();
@@ -92,6 +98,7 @@ class TrackerBoostingModel : public TrackerModel
  private:
 
   std::vector<Mat> currentSample;
+  std::vector<std::pair<float, float> > meanSigmaPair;
 
   int mode;
 };

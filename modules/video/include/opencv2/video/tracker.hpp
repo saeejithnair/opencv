@@ -456,6 +456,7 @@ class CV_EXPORTS_W TrackerModel
   Ptr<TrackerStateEstimator> stateEstimator;
   ConfidenceMap currentConfidenceMap;
   Trajectory trajectory;
+  int maxCMLength;
 
   virtual void modelEstimationImpl( const std::vector<Mat>& responses ) = 0;
   virtual void modelUpdateImpl() = 0;
@@ -590,9 +591,9 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
      * \param width Width of the bounding box
      * \param height Height of the bounding box
      * \param foreground label for target or background
-     * \param features features extracted
+     * \param responses list of features
      */
-    TrackerAdaBoostingTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& features );
+    TrackerAdaBoostingTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& responses );
 
     /**
      * \brief Destructor
@@ -605,24 +606,26 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
     /**
      * setters and getters
      */
+    void setTargetResponses( const Mat& responses );
     void setTargetFg( bool foreground );
-    void setFeatures( const Mat& features );
+    Mat getTargetResponses() const;
     bool isTargetFg() const;
-    Mat getFeatures() const;
 
    private:
     bool isTarget;
-    Mat targetFeatures;
+    Mat targetResponses;
 
   };
 
-  TrackerStateEstimatorAdaBoosting( int numClassifer, int initIterations, int nFeatures, Size patchSize, const Rect& ROI );
+  TrackerStateEstimatorAdaBoosting( int numClassifer, int initIterations, int nFeatures, Size patchSize, const Rect& ROI,
+                                    const std::vector<std::pair<float, float> >& meanSigma );
   ~TrackerStateEstimatorAdaBoosting();
 
   Rect getSampleROI() const;
   void setSampleROI( const Rect& ROI );
 
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
+  std::vector<int>  computeSelectedWeakClassifier();
 
  protected:
   Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
@@ -639,6 +642,7 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
   Rect sampleROI;
 
   ConfidenceMap currentConfidenceMap;
+  std::vector<std::pair<float, float> > meanSigmaPair;
 };
 
 /**
@@ -808,23 +812,25 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
     Params();
     int numFeatures;  // # of rects
     Size rectSize;    // rect size
-	bool isIntegral;
+    bool isIntegral;
   };
 
   TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parameters = TrackerFeatureHAAR::Params() );
 
   ~TrackerFeatureHAAR();
 
+  bool extractSelected( const std::vector<int> selFeatures, const std::vector<Mat>& images, Mat& response );
   void selection( Mat& response, int npoints );
+  std::vector<std::pair<float, float> >& getMeanSigmaPairs();
 
  protected:
-
   bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
  private:
 
   Params params;
   Ptr<CvHaarEvaluator> featureEvaluator;
+  std::vector<std::pair<float, float> > meanSigmaPairs;
 };
 
 /**

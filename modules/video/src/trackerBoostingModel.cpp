@@ -57,6 +57,7 @@ TrackerBoostingModel::TrackerBoostingModel( const Rect& boundingBox )
       new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState( Point2f( boundingBox.x, boundingBox.y ), boundingBox.width,
                                                                            boundingBox.height, true, Mat() );
   trajectory.push_back( initState );
+  maxCMLength = 10;
 }
 
 void TrackerBoostingModel::modelEstimationImpl( const std::vector<Mat>& responses )
@@ -77,6 +78,11 @@ void TrackerBoostingModel::setMode( int trainingMode, const std::vector<Mat>& sa
   mode = trainingMode;
 }
 
+std::vector<int> TrackerBoostingModel::getSelectedWeakClassifier()
+{
+  return ( Ptr<TrackerStateEstimatorAdaBoosting>( stateEstimator ) )->computeSelectedWeakClassifier();
+}
+
 void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
 {
   if( currentSample.empty() )
@@ -85,7 +91,7 @@ void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& resp
     return;
   }
 
-  for ( size_t i = 0; i < responses.size(); i++ )
+  for ( size_t i = 0; i < currentSample.size(); i++ )
   {
 
     Size currentSize;
@@ -100,14 +106,13 @@ void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& resp
     {
       foreground = false;
     }
-
-    //get the column of the HAAR responses
-    Mat singleResponse = responses.at( i );
+    //TODO check 0
+    const Mat resp = responses[0].col( i );
 
     //create the state
     Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> currentState =
         new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState( currentOfs, currentSample.at( i ).cols, currentSample.at( i ).rows,
-                                                                             foreground, singleResponse );
+                                                                             foreground, resp );
 
     confidenceMap.push_back( std::make_pair( currentState, 0 ) );
 

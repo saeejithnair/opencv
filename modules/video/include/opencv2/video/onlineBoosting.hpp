@@ -63,8 +63,11 @@ class StrongClassifierDirectSelection
                                        0 );
   virtual ~StrongClassifierDirectSelection();
 
+  void initBaseClassifier( const std::vector<std::pair<float, float> >& meanSigmaPairs );
+
   bool update( const Mat& image, Rect ROI, int target, float importance = 1.0 );
   float eval( const Mat& response, Rect ROI );
+  std::vector<int> getSelectedWeakClassifier();
   float classifySmooth( const std::vector<Mat>& images, const Rect& sampleROI, int& idx );
   int getNumBaseClassifier();
   Size getPatchSize() const;
@@ -75,6 +78,8 @@ class StrongClassifierDirectSelection
   //StrongClassifier
   int numBaseClassifier;
   int numAllWeakClassifier;
+  int numWeakClassifier;
+  int iterInit;
   BaseClassifier** baseClassifier;
   std::vector<float> alpha;
   cv::Size patchSize;
@@ -94,11 +99,10 @@ class BaseClassifier
 {
  public:
 
-  BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize );
+  BaseClassifier( int numWeakClassifier, int iterationInit, Size patchSize, const std::vector<std::pair<float, float> >& meanSigmaPairs );
   BaseClassifier( int numWeakClassifier, int iterationInit, WeakClassifierHaarFeature** weakClassifier );
 
-  WeakClassifierHaarFeature**
-  getReferenceWeakClassifier()
+  WeakClassifierHaarFeature** getReferenceWeakClassifier()
   {
     return weakClassifier;
   }
@@ -113,15 +117,14 @@ class BaseClassifier
   }
   ;
   int eval( const Mat& image, Rect ROI );
-  float getValue( const Mat& image, Rect ROI, int weakClassifierIdx );
   virtual ~BaseClassifier();
-  void getErrorMask( const Mat& image, Rect ROI, int target, bool* errorMask );
   float getError( int curWeakClassifier );
   void getErrors( float* errors );
+  int getSelectedClassifier() const;
 
  protected:
 
-  void generateRandomClassifier( Size patchSize );
+  void generateRandomClassifier( Size patchSize, const std::vector<std::pair<float, float> >& meanSigmaPairs );
   WeakClassifierHaarFeature** weakClassifier;
   bool m_referenceWeakClassifier;
   int m_numWeakClassifier;
@@ -133,44 +136,47 @@ class BaseClassifier
 
 };
 
+class EstimatedGaussDistribution
+{
+ public:
+
+  EstimatedGaussDistribution();
+  EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma );
+  virtual ~EstimatedGaussDistribution();
+  void update( float value );  //, float timeConstant = -1.0);
+  float getMean();
+  float getSigma();
+  void setValues( float mean, float sigma );
+
+ private:
+
+  float m_mean;
+  float m_sigma;
+  float m_P_mean;
+  float m_P_sigma;
+  float m_R_mean;
+  float m_R_sigma;
+};
+
 class WeakClassifierHaarFeature
 {
 
  public:
 
-  WeakClassifierHaarFeature( Size patchSize );
+  WeakClassifierHaarFeature( float featureMean, float featureSigma );
   virtual ~WeakClassifierHaarFeature();
 
-  bool update( const Mat& image, Rect ROI, int target );
-
-  int eval( const Mat& image, Rect ROI );
-
-  float getValue( const Mat& image, Rect ROI );
-
-  int getType()
-  {
-    return 1;
-  }
-  ;
-
-  EstimatedGaussDistribution*
-  getPosDistribution();
-  EstimatedGaussDistribution*
-  getNegDistribution();
-
-  void
-  resetPosDist();
-  void
-  initPosDist();
+  bool update( float value, int target );
+  int eval( float value );
 
  private:
 
-  Ptr<CvHaarEvaluator> m_feature;
+  float sigma;
+  float mean;
   ClassifierThreshold* m_classifier;
 
-  void
-  generateRandomClassifier( CvHaarEvaluator::EstimatedGaussDistribution* m_posSamples,
-                            CvHaarEvaluator::EstimatedGaussDistribution* m_negSamples );
+  void getInitialDistribution( EstimatedGaussDistribution *distribution );
+  void generateRandomClassifier( EstimatedGaussDistribution* m_posSamples, EstimatedGaussDistribution* m_negSamples );
 
 };
 
@@ -246,7 +252,7 @@ class ClassifierThreshold
 {
  public:
 
-  ClassifierThreshold( CvHaarEvaluator::EstimatedGaussDistribution* posSamples, CvHaarEvaluator::EstimatedGaussDistribution* negSamples );
+  ClassifierThreshold( EstimatedGaussDistribution* posSamples, EstimatedGaussDistribution* negSamples );
   virtual ~ClassifierThreshold();
 
   void update( float value, int target );
@@ -256,8 +262,8 @@ class ClassifierThreshold
 
  private:
 
-  CvHaarEvaluator::EstimatedGaussDistribution* m_posSamples;
-  CvHaarEvaluator::EstimatedGaussDistribution* m_negSamples;
+  EstimatedGaussDistribution* m_posSamples;
+  EstimatedGaussDistribution* m_negSamples;
 
   float m_threshold;
   int m_parity;
