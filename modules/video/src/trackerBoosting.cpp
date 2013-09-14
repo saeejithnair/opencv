@@ -109,8 +109,11 @@ void TrackerBoosting::write( cv::FileStorage& fs ) const
 bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 {
   //sampling
-  Mat intImage;
-  integral( image, intImage );
+  Mat_<int> intImage;
+  Mat_<double> intSqImage;
+  Mat image_;
+  cvtColor( image, image_, CV_RGB2GRAY );
+  integral( image_, intImage, intSqImage, CV_32S );
   TrackerSamplerCS::Params CSparameters;
   CSparameters.overlap = params.samplerOverlap;
   CSparameters.searchFactor = params.samplerSearchFactor;
@@ -171,8 +174,11 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 
 bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
 {
-  Mat intImage;
-  integral( image, intImage );
+  Mat_<int> intImage;
+  Mat_<double> intSqImage;
+  Mat image_;
+  cvtColor( image, image_, CV_RGB2GRAY );
+  integral( image_, intImage, intSqImage, CV_32S );
   //get the last location [AAM] X(k-1)
   Ptr<TrackerTargetState> lastLocation = model->getLastTargetState();
   Rect lastBoundingBox( lastLocation->getTargetPosition().x, lastLocation->getTargetPosition().y, lastLocation->getTargetWidth(),

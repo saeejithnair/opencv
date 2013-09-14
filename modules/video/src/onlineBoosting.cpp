@@ -281,10 +281,13 @@ void BaseClassifier::trainClassifier( const Mat& image, Rect ROI, int target, fl
   }
 
   for ( int curK = 0; curK <= K; curK++ )
+  {
     for ( int curWeakClassifier = 0; curWeakClassifier < m_numWeakClassifier + m_iterationInit; curWeakClassifier++ )
     {
-      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( image.at<float>( curWeakClassifier, 0 ), target );
+      errorMask[curWeakClassifier] = weakClassifier[curWeakClassifier]->update( image.at<float>( curWeakClassifier ), target );
     }
+  }
+
 }
 
 float BaseClassifier::getError( int curWeakClassifier )

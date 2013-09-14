@@ -43,6 +43,7 @@
 #define __OPENCV_TRACKER_HPP__
 
 #include "opencv2/core.hpp"
+#include "opencv2/imgproc/types_c.h"
 #include "feature.hpp"
 #include "onlineMIL.hpp"
 #include "onlineBoosting.hpp"
