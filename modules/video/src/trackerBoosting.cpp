@@ -242,7 +242,7 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   //Positive sampling
   //TODO boundingBox or lastboundingbox?
   ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_POSITIVE );
-  sampler->sampling( intImage, lastBoundingBox );
+  sampler->sampling( intImage, boundingBox );
   const std::vector<Mat> posSamples = sampler->getSamples();
 
   //Negative sampling
