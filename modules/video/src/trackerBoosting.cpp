@@ -305,8 +305,9 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   {
     if( replacedClassifier[j] != -1 && swappedClassified[j] != -1 )
     {
-      ( Ptr<TrackerFeatureHAAR>( featureSet->getTrackerFeature().at(0).second ) )->swapFeature( replacedClassifier[j], swappedClassified[j] );
-      ( Ptr<TrackerFeatureHAAR>( featureSet->getTrackerFeature().at(0).second ) )->swapFeature( swappedClassified[j], trackerFeature2->getFeatureAt( j ) );
+      ( Ptr<TrackerFeatureHAAR>( featureSet->getTrackerFeature().at( 0 ).second ) )->swapFeature( replacedClassifier[j], swappedClassified[j] );
+      ( Ptr<TrackerFeatureHAAR>( featureSet->getTrackerFeature().at( 0 ).second ) )->swapFeature( swappedClassified[j],
+                                                                                                  trackerFeature2->getFeatureAt( j ) );
     }
   }
 

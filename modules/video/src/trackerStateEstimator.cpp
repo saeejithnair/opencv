@@ -393,7 +393,7 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     {
       replacedClassifier[i] = boostClassifier->getReplacedClassifier();
       swappedClassifier[i] = boostClassifier->getSwappedClassifier();
-      if( replacedClassifier[i] >= 0 &&  swappedClassifier[i] >= 0 )
+      if( replacedClassifier[i] >= 0 && swappedClassifier[i] >= 0 )
         boostClassifier->replaceWeakClassifier( replacedClassifier[i], meanSigmaPair.at( i ) );
     }
     else
@@ -416,7 +416,7 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     {
       replacedClassifier[mapPosition] = boostClassifier->getReplacedClassifier();
       swappedClassifier[mapPosition] = boostClassifier->getSwappedClassifier();
-      if( replacedClassifier[mapPosition] >= 0 &&  swappedClassifier[mapPosition] >= 0 )
+      if( replacedClassifier[mapPosition] >= 0 && swappedClassifier[mapPosition] >= 0 )
         boostClassifier->replaceWeakClassifier( replacedClassifier[mapPosition], meanSigmaPair.at( mapPosition ) );
     }
     else

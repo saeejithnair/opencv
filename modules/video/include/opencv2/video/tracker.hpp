@@ -618,17 +618,62 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
 
   };
 
+  /**
+   * \brief Constructor
+   * \param numClassifer Number of base classifiers
+   * \param initIterations Number of iterations in the initialization
+   * \param nFeatures Number of features/weak classifiers
+   * \param patchSize tracking rect
+   * \param ROI initial ROI
+   * \param meanSigma pairs of mean/sigma
+   */
   TrackerStateEstimatorAdaBoosting( int numClassifer, int initIterations, int nFeatures, Size patchSize, const Rect& ROI,
                                     const std::vector<std::pair<float, float> >& meanSigma );
+
+  /**
+   * \brief Destructor
+   */
   ~TrackerStateEstimatorAdaBoosting();
 
+  /**
+   * \brief get the sampling ROI
+   * \return the sampling ROI
+   */
   Rect getSampleROI() const;
+
+  /**
+   * \brief set the sampling ROI
+   * \param ROI the sampling ROI
+   */
   void setSampleROI( const Rect& ROI );
 
+  /**
+   * \brief set the current confidence map
+   * \param confidenceMap the current confidence map
+   */
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
-  std::vector<int>  computeSelectedWeakClassifier();
-  std::vector<int>  computeReplacedClassifier();
+
+  /**
+   * \brief get the list of the selected weak classifiers for the classification step
+   * \return the  list of the selected weak classifiers
+   */
+  std::vector<int> computeSelectedWeakClassifier();
+
+  /**
+   * \brief get the list of the weak classifiers that should be replaced
+   * \return the list of the weak classifiers
+   */
+  std::vector<int> computeReplacedClassifier();
+
+  /**
+   * \brief get the list of the weak classifiers that replace those to be replaced
+   * \return the list of the weak classifiers
+   */
   std::vector<int> computeSwappedClassifier();
+
+  /**
+   * \brief set the mean/sigma to instantiate possibly new classifiers
+   */
   void setMeanSigmaPair( const std::vector<std::pair<float, float> >& meanSigmaPair );
 
  protected:
@@ -826,11 +871,41 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
 
   ~TrackerFeatureHAAR();
 
+  /**
+   * \brief Compute the features only for the selected indices in the images collection
+   * \param selFeatures indices of selected features
+   * \param images        The images.
+   * \param response      Computed features.
+   */
   bool extractSelected( const std::vector<int> selFeatures, const std::vector<Mat>& images, Mat& response );
+
   void selection( Mat& response, int npoints );
+
+  /**
+   * \brief get the list of mean/sigma
+   * \return the list of mean/sigma
+   */
   std::vector<std::pair<float, float> >& getMeanSigmaPairs();
+
+  /**
+   * \brief swap the feature in position source with the feature in position target
+   * \param source The source position
+   * \param target The target position
+   */
   bool swapFeature( int source, int target );
-  bool swapFeature( int id, CvHaarEvaluator::FeatureHaar& feature);
+
+  /**
+   * \brief swap the feature in position id with the feature input
+   * \param id The position
+   * \param feature The feature
+   */
+  bool swapFeature( int id, CvHaarEvaluator::FeatureHaar& feature );
+
+  /**
+   * \brief get the feature
+   * \param id The position
+   * \return the feature in position id
+   */
   CvHaarEvaluator::FeatureHaar& getFeatureAt( int id );
 
  protected:
