@@ -171,13 +171,6 @@ bool StrongClassifierDirectSelection::update( const Mat& image, Rect ROI, int ta
     replacedClassifier = baseClassifier[0]->computeReplaceWeakestClassifier( m_sumErrors, patchSize );
     swappedClassifier = baseClassifier[0]->getIdxOfNewWeakClassifier();
   }
-  /*if( useFeatureExchange )
-   {
-   int replacedClassifier = baseClassifier[0]->replaceWeakestClassifier( m_sumErrors, patchSize );
-   if( replacedClassifier > 0 )
-   for ( int curBaseClassifier = 1; curBaseClassifier < numBaseClassifier; curBaseClassifier++ )
-   baseClassifier[curBaseClassifier]->replaceClassifierStatistic( baseClassifier[0]->getIdxOfNewWeakClassifier(), replacedClassifier );
-   }*/
 
   return true;
 }
@@ -428,49 +421,6 @@ int BaseClassifier::computeReplaceWeakestClassifier( const std::vector<float> & 
     return -1;
 
 }
-/*
- //TODO remove
- int BaseClassifier::replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize )
- {
- float maxError = 0.0f;
- int index = -1;
-
- //search the classifier with the largest error
- for ( int curWeakClassifier = m_numWeakClassifier - 1; curWeakClassifier >= 0; curWeakClassifier-- )
- {
- if( errors[curWeakClassifier] > maxError )
- {
- maxError = errors[curWeakClassifier];
- index = curWeakClassifier;
- }
- }
-
- CV_Assert( index > -1 );
- CV_Assert( index != m_selectedClassifier );
-
- //replace
- m_idxOfNewWeakClassifier++;
- if( m_idxOfNewWeakClassifier == m_numWeakClassifier + m_iterationInit )
- m_idxOfNewWeakClassifier = m_numWeakClassifier;
-
- if( maxError > errors[m_idxOfNewWeakClassifier] )
- {
- delete weakClassifier[index];
- weakClassifier[index] = weakClassifier[m_idxOfNewWeakClassifier];
- m_wWrong[index] = m_wWrong[m_idxOfNewWeakClassifier];
- m_wWrong[m_idxOfNewWeakClassifier] = 1;
- m_wCorrect[index] = m_wCorrect[m_idxOfNewWeakClassifier];
- m_wCorrect[m_idxOfNewWeakClassifier] = 1;
-
- //TODO compute mean and sigma from model
- weakClassifier[m_idxOfNewWeakClassifier] = new WeakClassifierHaarFeature( 0, 0 );
-
- return index;
- }
- else
- return -1;
-
- }*/
 
 void BaseClassifier::replaceClassifierStatistic( int sourceIndex, int targetIndex )
 {

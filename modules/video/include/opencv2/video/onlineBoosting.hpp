@@ -117,7 +117,6 @@ class BaseClassifier
   void trainClassifier( const Mat& image, Rect ROI, int target, float importance, std::vector<bool>& errorMask );
   int selectBestClassifier( std::vector<bool>& errorMask, float importance, std::vector<float> & errors );
   int computeReplaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
-  int replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
   void replaceClassifierStatistic( int sourceIndex, int targetIndex );
   int getIdxOfNewWeakClassifier()
   {

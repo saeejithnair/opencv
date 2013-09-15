@@ -159,7 +159,7 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
                                                                                                meanSigmaPair );
   model->setTrackerStateEstimator( stateEstimator );
 
-  //Run model estimation and update
+  //Run model estimation and update for iterationInit iterations
   for ( int i = 0; i < params.iterationInit; i++ )
   {
     //compute temp features
@@ -177,7 +177,7 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
     model->modelEstimation( posResponse );
     model->modelUpdate();
 
-    //TODO get replaced classifier and change the features
+    //get replaced classifier and change the features
     std::vector<int> replacedClassifier = stateEstimator->computeReplacedClassifier();
     std::vector<int> swappedClassified = stateEstimator->computeSwappedClassifier();
     for ( size_t j = 0; j < replacedClassifier.size(); j++ )
@@ -226,9 +226,6 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
    rectangle( f, Rect( off.x, off.y, detectSamples.at( i ).cols, detectSamples.at( i ).rows ), Scalar( 255, 0, 0 ), 1 );
    }*/
 
-  //extract features from new samples
-  //featureSet->extraction( detectSamples );
-  //const std::vector<Mat> response = featureSet->getResponses();
   std::vector<Mat> responses;
   Mat response;
 
@@ -298,7 +295,7 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   //model update
   model->modelUpdate();
 
-  //TODO get replaced classifier and change the features
+  //get replaced classifier and change the features
   std::vector<int> replacedClassifier = ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->computeReplacedClassifier();
   std::vector<int> swappedClassified = ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->computeSwappedClassifier();
   for ( size_t j = 0; j < replacedClassifier.size(); j++ )
