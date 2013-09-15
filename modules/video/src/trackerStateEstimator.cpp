@@ -361,7 +361,7 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     //this is the first time that the classifier is built
     int numWeakClassifier = numBaseClassifier * 10;
 
-    bool useFeatureExchange = false;
+    bool useFeatureExchange = true;
     boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange,
                                                            iterationInit );
     //init base classifiers

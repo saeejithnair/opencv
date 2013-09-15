@@ -267,7 +267,7 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
 
   //Negative sampling
   ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_NEGATIVE );
-  sampler->sampling( intImage, lastBoundingBox );
+  sampler->sampling( intImage, boundingBox );
   const std::vector<Mat> negSamples = sampler->getSamples();
 
   if( posSamples.empty() || negSamples.empty() )
