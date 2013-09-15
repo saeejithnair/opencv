@@ -13,7 +13,7 @@ TrackerBoosting
 ---------------
 
 This is a real-time object tracking based on a novel on-line version of the AdaBoost algorithm.
-The classifier uses the surrounding background as negative examples in update step to avoid the drifting problem. 
+The classifier uses the surrounding background as negative examples in update step to avoid the drifting problem.
 
 .. ocv:class:: TrackerBoosting
 
@@ -24,18 +24,40 @@ Implementation of TrackerBoosting from :ocv:class:`Tracker`::
     public:
 
      TrackerBoosting( const TrackerBoosting::Params &parameters = TrackerBoosting::Params() );
-   
+
      virtual ~TrackerBoosting();
-   
+
      void read( const FileNode& fn );
      void write( FileStorage& fs ) const;
 
-   
-   };
-   
-   
-TODO
-----
 
-* TrackerBoosting
-* porting of boosting method from original MIL
+   };
+
+TrackerBoosting::Params
+------------------
+
+.. ocv:struct:: TrackerBoosting::Params
+
+List of BOOSTING parameters::
+
+   struct CV_EXPORTS Params
+   {
+    Params();
+    int numClassifiers;  //the number of classifiers to use in a OnlineBoosting algorithm
+    float samplerOverlap;  //search region parameters to use in a OnlineBoosting algorithm
+    float samplerSearchFactor;  // search region parameters to use in a OnlineBoosting algorithm
+    int iterationInit;  //the initial iterations
+    int featureSetNumFeatures;  // #features
+
+    void read( const FileNode& fn );
+    void write( FileStorage& fs ) const;
+   };
+
+TrackerBoosting::TrackerBoosting
+----------------------
+
+Constructor
+
+.. ocv:function:: bool TrackerBoosting::TrackerBoosting( const TrackerBoosting::Params &parameters = TrackerBoosting::Params() )
+
+    :param parameters: BOOSTING parameters :ocv:struct:`TrackerBoosting::Params`

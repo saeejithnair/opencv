@@ -231,6 +231,11 @@ TrackerFeatureHAAR class::
      ~TrackerFeatureHAAR();
 
      void selection( Mat& response, int npoints );
+     bool extractSelected( const std::vector<int> selFeatures, const std::vector<Mat>& images, Mat& response );
+     std::vector<std::pair<float, float> >& getMeanSigmaPairs();
+     bool swapFeature( int source, int target );
+     bool swapFeature( int id, CvHaarEvaluator::FeatureHaar& feature );
+     CvHaarEvaluator::FeatureHaar& getFeatureAt( int id );
    };
 
 .. note:: HAAR features implementation is copied from apps/traincascade and modified according to MIL implementation
@@ -247,6 +252,7 @@ List of TrackerFeatureHAAR parameters::
     Params();
     int numFeatures; // # of rects
     Size rectSize;   // rect size
+    bool isIntegral;  // true if input images are integral, false otherwise
    };
 
 TrackerFeatureHAAR::TrackerFeatureHAAR
@@ -271,6 +277,55 @@ Identify most effective features
    :param npoints: Max number of features
 
 .. note:: This method modifies the response parameter
+
+TrackerFeatureHAAR::extractSelected
+-----------------------------------
+
+Compute the features only for the selected indices in the images collection
+
+.. ocv:function:: bool TrackerFeatureHAAR::extractSelected( const std::vector<int> selFeatures, const std::vector<Mat>& images, Mat& response )
+
+   :param selFeatures:  indices of selected features
+
+   :param images:  The images
+
+   :param response:  Collection of response for the specific TrackerFeature
+
+TrackerFeatureHAAR::getMeanSigmaPairs
+-------------------------------------
+
+Get the list of mean/sigma. Return the list of mean/sigma
+
+.. ocv:function:: std::vector<std::pair<float, float> >& TrackerFeatureHAAR::getMeanSigmaPairs()
+
+TrackerFeatureHAAR::swapFeature
+-------------------------------
+
+Swap the feature in position source with the feature in position target
+
+.. ocv:function:: bool TrackerFeatureHAAR::swapFeature( int source, int target )
+
+   :param source:  The source position
+
+   :param target:  The target position
+
+Swap the feature in position id with the feature input
+
+.. ocv:function:: bool TrackerFeatureHAAR::swapFeature( int id, CvHaarEvaluator::FeatureHaar& feature )
+
+   :param id: The position
+
+   :param feature: The feature
+
+TrackerFeatureHAAR::getFeatureAt
+--------------------------------
+
+Get the feature in position id
+
+.. ocv:function:: CvHaarEvaluator::FeatureHaar& TrackerFeatureHAAR::getFeatureAt( int id )
+
+   :param id: The position
+
 
 TrackerFeatureHOG
 -----------------

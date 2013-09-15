@@ -85,8 +85,6 @@ The modes available now:
 
 * ``"CSC"`` -- Current State Center
 
-The modes available soon:
-
 * ``"CS"`` -- Current State
 
 Example ``TrackerSamplerAlgorithm::addTrackerSamplerAlgorithm`` : ::
@@ -140,6 +138,8 @@ The modes available now:
 
 * ``"CSC"`` -- Current State Center
 
+* ``"CS"`` -- Current State
+
 
 TrackerSamplerAlgorithm::sampling
 ---------------------------------
@@ -164,7 +164,7 @@ Get the name of the specific TrackerSamplerAlgorithm
 Specialized TrackerSamplerAlgorithm
 ===================================
 
-In [AAM]_ table I are described the most known sampling strategies. At moment only :ocv:class:`TrackerSamplerCSC` is implemented.
+In [AAM]_ table I are described the most known sampling strategies. At moment :ocv:class:`TrackerSamplerCSC` and :ocv:class:`TrackerSamplerCS` are implemented.
 
 TrackerSamplerCSC : TrackerSamplerAlgorithm
 -------------------------------------------
@@ -232,11 +232,62 @@ The modes are:
 * ``"MODE_TRACK_NEG = 4"`` -- for the negative sampling in update step
 * ``"MODE_DETECT = 5"`` -- for the sampling in detection step
 
-TrackerSamplerCS
-----------------
+TrackerSamplerCS : TrackerSamplerAlgorithm
+-------------------------------------------
 
-TrackerSampler based on CS (current state)
+TrackerSampler based on CS (current state), used by algorithm TrackerBoosting
 
-.. ocv:class:: TrackerSamplerCS : public TrackerSamplerAlgorithm
+.. ocv:class:: TrackerSamplerCS
 
-TODO
+TrackerSamplerCS class::
+
+
+   class CV_EXPORTS_W TrackerSamplerCS
+   {
+    public:
+
+     TrackerSamplerCS( const TrackerSamplerCS::Params &parameters = TrackerSamplerCS::Params() );
+     void setMode( int samplingMode );
+
+     ~TrackerSamplerCS();
+   };
+
+
+TrackerSamplerCS::Params
+-------------------------
+
+.. ocv:struct:: TrackerSamplerCS::Params
+
+List of TrackerSamplerCS parameters::
+
+   struct CV_EXPORTS Params
+   {
+    Params();
+    float overlap;  //overlapping for the search windows
+    float searchFactor; //search region parameter
+   };
+
+
+TrackerSamplerCS::TrackerSamplerCS
+------------------------------------
+
+Constructor
+
+.. ocv:function:: TrackerSamplerCS::TrackerSamplerCS( const TrackerSamplerCS::Params &parameters = TrackerSamplerCS::Params() )
+
+    :param parameters: TrackerSamplerCS parameters :ocv:struct:`TrackerSamplerCS::Params`
+
+TrackerSamplerCS::setMode
+--------------------------
+
+Set the sampling mode of TrackerSamplerCS
+
+.. ocv:function:: void TrackerSamplerCS::setMode( int samplingMode )
+
+    :param samplingMode: The sampling mode
+
+The modes are:
+
+* ``"MODE_POSITIVE = 1"`` -- for the positive sampling
+* ``"MODE_NEGATIVE = 2"`` -- for the negative sampling
+* ``"MODE_CLASSIFY = 3"`` -- for the sampling in classification step

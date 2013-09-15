@@ -636,43 +636,44 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
   ~TrackerStateEstimatorAdaBoosting();
 
   /**
-   * \brief get the sampling ROI
+   * \brief Get the sampling ROI
    * \return the sampling ROI
    */
   Rect getSampleROI() const;
 
   /**
-   * \brief set the sampling ROI
+   * \brief Set the sampling ROI
    * \param ROI the sampling ROI
    */
   void setSampleROI( const Rect& ROI );
 
   /**
-   * \brief set the current confidence map
+   * \brief Set the current confidence map
    * \param confidenceMap the current confidence map
    */
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
 
   /**
-   * \brief get the list of the selected weak classifiers for the classification step
+   * \brief Get the list of the selected weak classifiers for the classification step
    * \return the  list of the selected weak classifiers
    */
   std::vector<int> computeSelectedWeakClassifier();
 
   /**
-   * \brief get the list of the weak classifiers that should be replaced
+   * \brief Get the list of the weak classifiers that should be replaced
    * \return the list of the weak classifiers
    */
   std::vector<int> computeReplacedClassifier();
 
   /**
-   * \brief get the list of the weak classifiers that replace those to be replaced
+   * \brief Get the list of the weak classifiers that replace those to be replaced
    * \return the list of the weak classifiers
    */
   std::vector<int> computeSwappedClassifier();
 
   /**
-   * \brief set the mean/sigma to instantiate possibly new classifiers
+   * \brief Set the mean/sigma to instantiate possibly new classifiers
+   * \param meanSigmaPair the mean/sigma pairs
    */
   void setMeanSigmaPair( const std::vector<std::pair<float, float> >& meanSigmaPair );
 
@@ -777,8 +778,8 @@ class CV_EXPORTS_W TrackerSamplerCS : public TrackerSamplerAlgorithm
   struct CV_EXPORTS Params
   {
     Params();
-    float overlap;
-    float searchFactor;
+    float overlap;  //overlapping for the search windows
+    float searchFactor;  //search region parameter
   };
   TrackerSamplerCS( const TrackerSamplerCS::Params &parameters = TrackerSamplerCS::Params() );
 
@@ -864,7 +865,7 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
     Params();
     int numFeatures;  // # of rects
     Size rectSize;    // rect size
-    bool isIntegral;
+    bool isIntegral;  // true if input images are integral, false otherwise
   };
 
   TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parameters = TrackerFeatureHAAR::Params() );
@@ -888,21 +889,21 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
   std::vector<std::pair<float, float> >& getMeanSigmaPairs();
 
   /**
-   * \brief swap the feature in position source with the feature in position target
+   * \brief Swap the feature in position source with the feature in position target
    * \param source The source position
    * \param target The target position
    */
   bool swapFeature( int source, int target );
 
   /**
-   * \brief swap the feature in position id with the feature input
+   * \brief Swap the feature in position id with the feature input
    * \param id The position
    * \param feature The feature
    */
   bool swapFeature( int id, CvHaarEvaluator::FeatureHaar& feature );
 
   /**
-   * \brief get the feature
+   * \brief Get the feature
    * \param id The position
    * \return the feature in position id
    */

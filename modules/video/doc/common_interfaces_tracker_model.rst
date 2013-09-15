@@ -255,7 +255,7 @@ Specialized TrackerStateEstimator
 
 In [AMVOT]_  Statistical modeling (Fig. 3), Table III (generative) - IV (discriminative) - V (hybrid) are described the most known statistical model.
 
-At moment only :ocv:class:`TrackerStateEstimatorMILBoosting` is implemented.
+At moment :ocv:class:`TrackerStateEstimatorMILBoosting` and :ocv:class:`TrackerStateEstimatorAdaBoosting` are implemented.
 
 TrackerStateEstimatorMILBoosting : TrackerStateEstimator
 --------------------------------------------------------
@@ -349,3 +349,158 @@ Set the current confidenceMap
 .. ocv:function::  void TrackerStateEstimatorMILBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
 
     :param confidenceMap: The current :c:type:`ConfidenceMap`
+
+TrackerStateEstimatorAdaBoosting : TrackerStateEstimator
+--------------------------------------------------------
+
+TrackerStateEstimatorAdaBoosting based on ADA-Boosting
+
+.. ocv:class:: TrackerStateEstimatorAdaBoosting
+
+TrackerStateEstimatorAdaBoosting class::
+
+    class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimator
+    {
+     public:
+      class TrackerAdaBoostingTargetState : public TrackerTargetState
+      {
+       ...
+      };
+      TrackerStateEstimatorAdaBoosting( int numClassifer, int initIterations, int nFeatures, Size patchSize, const Rect& ROI, const std::vector<std::pair<float, float> >& meanSigma );
+      ~TrackerStateEstimatorAdaBoosting();
+
+      Rect getSampleROI() const;
+      void setSampleROI( const Rect& ROI );
+      void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
+      std::vector<int> computeSelectedWeakClassifier();
+      std::vector<int> computeReplacedClassifier();
+      std::vector<int> computeSwappedClassifier();
+      void setMeanSigmaPair( const std::vector<std::pair<float, float> >& meanSigmaPair );
+    };
+
+TrackerAdaBoostingTargetState : TrackerTargetState
+--------------------------------------------------
+
+Implementation of the target state for TrackerAdaBoostingTargetState
+
+.. ocv:class:: TrackerAdaBoostingTargetState
+
+TrackerAdaBoostingTargetState class::
+
+     class TrackerAdaBoostingTargetState : public TrackerTargetState
+     {
+      public:
+      TrackerAdaBoostingTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& responses );
+      ~TrackerAdaBoostingTargetState(){};
+
+      void setTargetResponses( const Mat& responses );
+      void setTargetFg( bool foreground );
+      Mat getTargetResponses() const;
+      bool isTargetFg() const;
+     };
+
+TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::setTargetFg
+----------------------------------------------------------------------------
+
+Set label: true for target foreground, false for background
+
+.. ocv:function::  void TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::setTargetFg( bool foreground )
+
+    :param foreground: Label for background/foreground
+
+TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::setTargetResponses
+-----------------------------------------------------------------------------------
+
+Set the features extracted from :ocv:class:`TrackerFeatureSet`
+
+.. ocv:function::  void TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::setTargetResponses( const Mat& responses )
+
+    :param responses: The features extracted
+
+TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::isTargetFg
+---------------------------------------------------------------------------
+
+Get the label. Return true for target foreground, false for background
+
+.. ocv:function:: bool TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::isTargetFg() const
+
+TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::getTargetResponses
+-----------------------------------------------------------------------------------
+
+Get the features extracted
+
+.. ocv:function:: Mat TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState::getTargetResponses()
+
+TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting
+------------------------------------------------------------------
+
+Constructor
+
+.. ocv:function::  TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClassifer, int initIterations, int nFeatures, Size patchSize, const Rect& ROI, const std::vector<std::pair<float, float> >& meanSigma )
+
+    :param numClassifer: Number of base classifiers
+
+    :param initIterations: Number of iterations in the initialization
+
+    :param nFeatures: Number of features/weak classifiers
+
+    :param patchSize: tracking rect
+
+    :param ROI: initial ROI
+
+    :param meanSigma: pairs of mean/sigma
+
+TrackerStateEstimatorAdaBoosting::setCurrentConfidenceMap
+---------------------------------------------------------
+
+Set the current confidenceMap
+
+.. ocv:function::  void TrackerStateEstimatorAdaBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
+
+    :param confidenceMap: The current :c:type:`ConfidenceMap`
+
+TrackerStateEstimatorAdaBoosting::getSampleROI
+----------------------------------------------
+
+Get the sampling ROI
+
+.. ocv:function::  Rect TrackerStateEstimatorAdaBoosting::getSampleROI() const
+
+TrackerStateEstimatorAdaBoosting::setSampleROI
+----------------------------------------------
+
+Set the sampling ROI
+
+.. ocv:function::  void TrackerStateEstimatorAdaBoosting::setSampleROI( const Rect& ROI )
+
+    :param ROI: the sampling ROI
+
+TrackerStateEstimatorAdaBoosting::computeSelectedWeakClassifier
+---------------------------------------------------------------
+
+Get the list of the selected weak classifiers for the classification step
+
+.. ocv:function::  std::vector<int> TrackerStateEstimatorAdaBoosting::computeSelectedWeakClassifier()
+
+TrackerStateEstimatorAdaBoosting::computeReplacedClassifier
+-----------------------------------------------------------
+
+Get the list of the weak classifiers that should be replaced
+
+.. ocv:function::  std::vector<int> TrackerStateEstimatorAdaBoosting::computeReplacedClassifier()
+
+TrackerStateEstimatorAdaBoosting::computeSwappedClassifier
+----------------------------------------------------------
+
+Get the list of the weak classifiers that replace those to be replaced
+
+.. ocv:function::  std::vector<int> TrackerStateEstimatorAdaBoosting::computeSwappedClassifier()
+
+TrackerStateEstimatorAdaBoosting::setMeanSigmaPair
+--------------------------------------------------
+
+Set the mean/sigma to instantiate possibly new classifiers
+
+.. ocv:function::  void TrackerStateEstimatorAdaBoosting::setMeanSigmaPair( const std::vector<std::pair<float, float> >& meanSigmaPair )
+
+    :param meanSigmaPair: the mean/sigma pairs
