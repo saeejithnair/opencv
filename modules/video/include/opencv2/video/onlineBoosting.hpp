@@ -72,7 +72,11 @@ class StrongClassifierDirectSelection
   int getNumBaseClassifier();
   Size getPatchSize() const;
   Rect getROI() const;
+  bool getUseFeatureExchange() const;
+  int getReplacedClassifier() const;
 
+  void replaceWeakClassifier( int idx, std::pair<float, float> meanSigma );
+  int getSwappedClassifier() const;
  private:
 
   //StrongClassifier
@@ -93,6 +97,9 @@ class StrongClassifierDirectSelection
 
   Detector* detector;
   Rect ROI;
+
+  int replacedClassifier;
+  int swappedClassifier;
 };
 
 class BaseClassifier
@@ -109,6 +116,7 @@ class BaseClassifier
   ;
   void trainClassifier( const Mat& image, Rect ROI, int target, float importance, std::vector<bool>& errorMask );
   int selectBestClassifier( std::vector<bool>& errorMask, float importance, std::vector<float> & errors );
+  int computeReplaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
   int replaceWeakestClassifier( const std::vector<float> & errors, Size patchSize );
   void replaceClassifierStatistic( int sourceIndex, int targetIndex );
   int getIdxOfNewWeakClassifier()
@@ -121,6 +129,7 @@ class BaseClassifier
   float getError( int curWeakClassifier );
   void getErrors( float* errors );
   int getSelectedClassifier() const;
+  void replaceWeakClassifier( int index, std::pair<float, float> meanSigma );
 
  protected:
 

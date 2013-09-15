@@ -627,6 +627,9 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
 
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
   std::vector<int>  computeSelectedWeakClassifier();
+  std::vector<int>  computeReplacedClassifier();
+  std::vector<int> computeSwappedClassifier();
+  void setMeanSigmaPair( const std::vector<std::pair<float, float> >& meanSigmaPair );
 
  protected:
   Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
@@ -641,6 +644,9 @@ class CV_EXPORTS_W TrackerStateEstimatorAdaBoosting : public TrackerStateEstimat
   bool trained;
   Size initPatchSize;
   Rect sampleROI;
+  std::vector<std::pair<float, float> > currentMeanSigmaPair;
+  std::vector<int> replacedClassifier;
+  std::vector<int> swappedClassifier;
 
   ConfidenceMap currentConfidenceMap;
   std::vector<std::pair<float, float> > meanSigmaPair;
@@ -823,6 +829,9 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
   bool extractSelected( const std::vector<int> selFeatures, const std::vector<Mat>& images, Mat& response );
   void selection( Mat& response, int npoints );
   std::vector<std::pair<float, float> >& getMeanSigmaPairs();
+  bool swapFeature( int source, int target );
+  bool swapFeature( int id, CvHaarEvaluator::FeatureHaar& feature);
+  CvHaarEvaluator::FeatureHaar& getFeatureAt( int id );
 
  protected:
   bool computeImpl( const std::vector<Mat>& images, Mat& response );

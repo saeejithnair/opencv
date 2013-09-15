@@ -255,6 +255,7 @@ TrackerStateEstimatorAdaBoosting::TrackerStateEstimatorAdaBoosting( int numClass
   trained = false;
   sampleROI = ROI;
   meanSigmaPair = meanSigma;
+
 }
 
 Rect TrackerStateEstimatorAdaBoosting::getSampleROI() const
@@ -311,9 +312,24 @@ void TrackerStateEstimatorAdaBoosting::setCurrentConfidenceMap( ConfidenceMap& c
   currentConfidenceMap = confidenceMap;
 }
 
+std::vector<int> TrackerStateEstimatorAdaBoosting::computeReplacedClassifier()
+{
+  return replacedClassifier;
+}
+
+std::vector<int> TrackerStateEstimatorAdaBoosting::computeSwappedClassifier()
+{
+  return swappedClassifier;
+}
+
 std::vector<int> TrackerStateEstimatorAdaBoosting::computeSelectedWeakClassifier()
 {
   return boostClassifier->getSelectedWeakClassifier();
+}
+
+void TrackerStateEstimatorAdaBoosting::setMeanSigmaPair( const std::vector<std::pair<float, float> >& meanSigmaPair )
+{
+  currentMeanSigmaPair = meanSigmaPair;
 }
 
 Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
@@ -345,7 +361,6 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     //this is the first time that the classifier is built
     int numWeakClassifier = numBaseClassifier * 10;
 
-    //TODO useFeatureExchange = true
     bool useFeatureExchange = false;
     boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange,
                                                            iterationInit );
@@ -356,6 +371,12 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
   }
 
   ConfidenceMap lastConfidenceMap = confidenceMaps.back();
+  bool featureEx = boostClassifier->getUseFeatureExchange();
+
+  replacedClassifier.clear();
+  replacedClassifier.resize( lastConfidenceMap.size(), -1 );
+  swappedClassifier.clear();
+  swappedClassifier.resize( lastConfidenceMap.size(), -1 );
 
   for ( size_t i = 0; i < lastConfidenceMap.size() / 2; i++ )
   {
@@ -367,10 +388,22 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
       currentFg = -1;
     Mat res = currentTargetState->getTargetResponses();
 
-    //TODO temp
     boostClassifier->update( res, currentRect, currentFg );
+    if( featureEx )
+    {
+      replacedClassifier[i] = boostClassifier->getReplacedClassifier();
+      swappedClassifier[i] = boostClassifier->getSwappedClassifier();
+      if( replacedClassifier[i] >= 0 &&  swappedClassifier[i] >= 0 )
+        boostClassifier->replaceWeakClassifier( replacedClassifier[i], meanSigmaPair.at( i ) );
+    }
+    else
+    {
+      replacedClassifier[i] = -1;
+      swappedClassifier[i] = -1;
+    }
 
-    Ptr<TrackerAdaBoostingTargetState> currentTargetState2 = lastConfidenceMap.at( i + lastConfidenceMap.size() / 2 ).first;
+    int mapPosition = i + lastConfidenceMap.size() / 2;
+    Ptr<TrackerAdaBoostingTargetState> currentTargetState2 = lastConfidenceMap.at( mapPosition ).first;
     currentRect = Rect( currentTargetState2->getTargetPosition().x, currentTargetState2->getTargetPosition().y, currentTargetState2->getTargetWidth(),
                         currentTargetState2->getTargetHeight() );
     currentFg = 1;
@@ -378,8 +411,19 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
       currentFg = -1;
     const Mat res2 = currentTargetState2->getTargetResponses();
 
-    //TODO temp
     boostClassifier->update( res2, currentRect, currentFg );
+    if( featureEx )
+    {
+      replacedClassifier[mapPosition] = boostClassifier->getReplacedClassifier();
+      swappedClassifier[mapPosition] = boostClassifier->getSwappedClassifier();
+      if( replacedClassifier[mapPosition] >= 0 &&  swappedClassifier[mapPosition] >= 0 )
+        boostClassifier->replaceWeakClassifier( replacedClassifier[mapPosition], meanSigmaPair.at( mapPosition ) );
+    }
+    else
+    {
+      replacedClassifier[mapPosition] = -1;
+      swappedClassifier[mapPosition] = -1;
+    }
   }
 
 }

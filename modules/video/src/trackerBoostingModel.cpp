@@ -106,7 +106,6 @@ void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& resp
     {
       foreground = false;
     }
-    //TODO check 0
     const Mat resp = responses[0].col( i );
 
     //create the state

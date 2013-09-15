@@ -162,11 +162,32 @@ bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
   //Run model estimation and update
   for ( int i = 0; i < params.iterationInit; i++ )
   {
+    //compute temp features
+    TrackerFeatureHAAR::Params HAARparameters2;
+    HAARparameters2.numFeatures = ( posSamples.size() + negSamples.size() );
+    HAARparameters2.isIntegral = true;
+    HAARparameters2.rectSize = Size( boundingBox.width, boundingBox.height );
+    Ptr<TrackerFeatureHAAR> trackerFeature2 = new TrackerFeatureHAAR( HAARparameters2 );
+    const std::vector<std::pair<float, float> > meanSigmaPair2 = ( (Ptr<TrackerFeatureHAAR> ) trackerFeature2 )->getMeanSigmaPairs();
+
+    stateEstimator->setMeanSigmaPair( meanSigmaPair2 );
     ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_NEGATIVE, negSamples );
     model->modelEstimation( negResponse );
     ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_POSITIVE, posSamples );
     model->modelEstimation( posResponse );
     model->modelUpdate();
+
+    //TODO get replaced classifier and change the features
+    std::vector<int> replacedClassifier = stateEstimator->computeReplacedClassifier();
+    std::vector<int> swappedClassified = stateEstimator->computeSwappedClassifier();
+    for ( size_t j = 0; j < replacedClassifier.size(); j++ )
+    {
+      if( replacedClassifier[j] != -1 && swappedClassified[j] != -1 )
+      {
+        ( Ptr<TrackerFeatureHAAR>( trackerFeature ) )->swapFeature( replacedClassifier[j], swappedClassified[j] );
+        ( Ptr<TrackerFeatureHAAR>( trackerFeature ) )->swapFeature( swappedClassified[j], trackerFeature2->getFeatureAt( j ) );
+      }
+    }
   }
 
   return true;
@@ -240,7 +261,6 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
 
   //sampling new frame based on new location
   //Positive sampling
-  //TODO boundingBox or lastboundingbox?
   ( (Ptr<TrackerSamplerCS> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCS::MODE_POSITIVE );
   sampler->sampling( intImage, boundingBox );
   const std::vector<Mat> posSamples = sampler->getSamples();
@@ -260,6 +280,15 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   featureSet->extraction( negSamples );
   const std::vector<Mat> negResponse = featureSet->getResponses();
 
+  //compute temp features
+  TrackerFeatureHAAR::Params HAARparameters2;
+  HAARparameters2.numFeatures = ( posSamples.size() + negSamples.size() );
+  HAARparameters2.isIntegral = true;
+  HAARparameters2.rectSize = Size( boundingBox.width, boundingBox.height );
+  Ptr<TrackerFeatureHAAR> trackerFeature2 = new TrackerFeatureHAAR( HAARparameters2 );
+  const std::vector<std::pair<float, float> > meanSigmaPair2 = trackerFeature2->getMeanSigmaPairs();
+  ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->setMeanSigmaPair( meanSigmaPair2 );
+
   //model estimate
   ( (Ptr<TrackerBoostingModel> ) model )->setMode( TrackerBoostingModel::MODE_NEGATIVE, negSamples );
   model->modelEstimation( negResponse );
@@ -268,6 +297,18 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
 
   //model update
   model->modelUpdate();
+
+  //TODO get replaced classifier and change the features
+  std::vector<int> replacedClassifier = ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->computeReplacedClassifier();
+  std::vector<int> swappedClassified = ( (Ptr<TrackerStateEstimatorAdaBoosting> ) model->getTrackerStateEstimator() )->computeSwappedClassifier();
+  for ( size_t j = 0; j < replacedClassifier.size(); j++ )
+  {
+    if( replacedClassifier[j] != -1 && swappedClassified[j] != -1 )
+    {
+      ( Ptr<TrackerFeatureHAAR>( featureSet->getTrackerFeature().at(0).second ) )->swapFeature( replacedClassifier[j], swappedClassified[j] );
+      ( Ptr<TrackerFeatureHAAR>( featureSet->getTrackerFeature().at(0).second ) )->swapFeature( swappedClassified[j], trackerFeature2->getFeatureAt( j ) );
+    }
+  }
 
   return true;
 
