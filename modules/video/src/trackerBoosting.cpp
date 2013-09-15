@@ -309,7 +309,6 @@ bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
   }
 
   return true;
-
 }
 
 } /* namespace cv */
