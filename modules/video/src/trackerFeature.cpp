@@ -237,6 +237,38 @@ bool TrackerFeatureHAAR::extractSelected( const std::vector<int> selFeatures, co
   return true;
 }
 
+class Parallel_compute : public cv::ParallelLoopBody
+{
+ private:
+  Ptr<CvHaarEvaluator> featureEvaluator;
+  std::vector<Mat> images;
+  Mat response;
+  //std::vector<CvHaarEvaluator::FeatureHaar> features;
+ public:
+  Parallel_compute( Ptr<CvHaarEvaluator>& fe, const std::vector<Mat>& img, Mat& resp ) :
+      featureEvaluator(fe),
+      images( img ),
+      response( resp ){
+
+    //features = featureEvaluator->getFeatures();
+  }
+
+  virtual void operator()( const cv::Range &r ) const
+  {
+    for ( register int jf = r.start; jf != r.end; ++jf )
+    {
+      int c = images[jf].cols;
+      int r = images[jf].rows;
+      for ( int j = 0; j < featureEvaluator->getNumFeatures(); j++ )
+      {
+        float res = 0;
+        featureEvaluator->getFeatures()[j].eval( images[jf], Rect( 0, 0, c, r ), &res );
+        ( Mat_<float>( response ) )( j, jf ) = res;
+      }
+    }
+  }
+};
+
 bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
   if( images.empty() )
@@ -249,8 +281,11 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
   response = Mat_<float>( Size( images.size(), numFeatures ) );
   //response.create( Size( images.size(), numFeatures ), CV_32F );
 
+  std::vector<CvHaarEvaluator::FeatureHaar> f = featureEvaluator->getFeatures();
   //for each sample compute #n_feature -> put each feature (n Rect) in response
-  for ( size_t i = 0; i < images.size(); i++ )
+  parallel_for_( Range( 0, images.size() ), Parallel_compute( featureEvaluator, images, response ) );
+
+  /*for ( size_t i = 0; i < images.size(); i++ )
   {
     int c = images[i].cols;
     int r = images[i].rows;
@@ -261,7 +296,7 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
       ( Mat_<float>( response ) )( j, i ) = res;
       //response.at<float>( j, i ) = res;
     }
-  }
+  }*/
 
   return true;
 }
