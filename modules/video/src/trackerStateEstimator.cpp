@@ -336,13 +336,13 @@ Ptr<TrackerTargetState> TrackerStateEstimatorAdaBoosting::estimateImpl( const st
 {
   //run classify in order to compute next location
   if( currentConfidenceMap.empty() )
-    return 0;
+    return Ptr<TrackerTargetState>();
 
   std::vector<Mat> images;
 
   for ( size_t i = 0; i < currentConfidenceMap.size(); i++ )
   {
-    Ptr<TrackerAdaBoostingTargetState> currentTargetState = currentConfidenceMap.at( i ).first;
+    Ptr<TrackerAdaBoostingTargetState> currentTargetState = currentConfidenceMap.at( i ).first.staticCast<TrackerAdaBoostingTargetState>();
     images.push_back( currentTargetState->getTargetResponses() );
   }
 
@@ -362,8 +362,8 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     int numWeakClassifier = numBaseClassifier * 10;
 
     bool useFeatureExchange = true;
-    boostClassifier = new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange,
-                                                           iterationInit );
+    boostClassifier = Ptr<StrongClassifierDirectSelection>(
+        new StrongClassifierDirectSelection( numBaseClassifier, numWeakClassifier, initPatchSize, sampleROI, useFeatureExchange, iterationInit ) );
     //init base classifiers
     boostClassifier->initBaseClassifier( meanSigmaPair );
 
@@ -380,7 +380,7 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
 
   for ( size_t i = 0; i < lastConfidenceMap.size() / 2; i++ )
   {
-    Ptr<TrackerAdaBoostingTargetState> currentTargetState = lastConfidenceMap.at( i ).first;
+    Ptr<TrackerAdaBoostingTargetState> currentTargetState = lastConfidenceMap.at( i ).first.staticCast<TrackerAdaBoostingTargetState>();
     Rect currentRect( currentTargetState->getTargetPosition().x, currentTargetState->getTargetPosition().y, currentTargetState->getTargetWidth(),
                       currentTargetState->getTargetHeight() );
     int currentFg = 1;
@@ -403,7 +403,7 @@ void TrackerStateEstimatorAdaBoosting::updateImpl( std::vector<ConfidenceMap>& c
     }
 
     int mapPosition = i + lastConfidenceMap.size() / 2;
-    Ptr<TrackerAdaBoostingTargetState> currentTargetState2 = lastConfidenceMap.at( mapPosition ).first;
+    Ptr<TrackerAdaBoostingTargetState> currentTargetState2 = lastConfidenceMap.at( mapPosition ).first.staticCast<TrackerAdaBoostingTargetState>();
     currentRect = Rect( currentTargetState2->getTargetPosition().x, currentTargetState2->getTargetPosition().y, currentTargetState2->getTargetWidth(),
                         currentTargetState2->getTargetHeight() );
     currentFg = 1;

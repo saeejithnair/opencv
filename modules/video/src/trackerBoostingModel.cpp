@@ -54,8 +54,9 @@ TrackerBoostingModel::TrackerBoostingModel( const Rect& boundingBox )
   mode = MODE_POSITIVE;
 
   Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> initState =
-      new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState( Point2f( boundingBox.x, boundingBox.y ), boundingBox.width,
-                                                                           boundingBox.height, true, Mat() );
+      Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState>(
+          new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState( Point2f( boundingBox.x, boundingBox.y ), boundingBox.width,
+                                                                               boundingBox.height, true, Mat() ) );
   trajectory.push_back( initState );
   maxCMLength = 10;
 }
@@ -80,7 +81,7 @@ void TrackerBoostingModel::setMode( int trainingMode, const std::vector<Mat>& sa
 
 std::vector<int> TrackerBoostingModel::getSelectedWeakClassifier()
 {
-  return ( Ptr<TrackerStateEstimatorAdaBoosting>( stateEstimator ) )->computeSelectedWeakClassifier();
+  return stateEstimator.staticCast<TrackerStateEstimatorAdaBoosting>()->computeSelectedWeakClassifier();
 }
 
 void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
@@ -109,9 +110,10 @@ void TrackerBoostingModel::responseToConfidenceMap( const std::vector<Mat>& resp
     const Mat resp = responses[0].col( i );
 
     //create the state
-    Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> currentState =
+    Ptr<TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState> currentState = Ptr<
+        TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState>(
         new TrackerStateEstimatorAdaBoosting::TrackerAdaBoostingTargetState( currentOfs, currentSample.at( i ).cols, currentSample.at( i ).rows,
-                                                                             foreground, resp );
+                                                                             foreground, resp ) );
 
     confidenceMap.push_back( std::make_pair( currentState, 0 ) );
 
