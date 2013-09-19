@@ -134,7 +134,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
   CSCparameters.trackMaxPosNum = params.samplerTrackMaxPosNum;
   CSCparameters.trackMaxNegNum = params.samplerTrackMaxNegNum;
 
-  Ptr<TrackerSamplerAlgorithm> CSCSampler = new TrackerSamplerCSC( CSCparameters );
+  Ptr<TrackerSamplerAlgorithm> CSCSampler = Ptr<TrackerSamplerCSC>( new TrackerSamplerCSC( CSCparameters ) );
   if( !sampler->addTrackerSamplerAlgorithm( CSCSampler ) )
     return false;
 
@@ -142,12 +142,12 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
   //sampler->addTrackerSamplerAlgorithm( "CSC" );
 
   //Positive sampling
-  Ptr<TrackerSamplerCSC>( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_POS );
+  CSCSampler.staticCast<TrackerSamplerCSC>()->setMode( TrackerSamplerCSC::MODE_INIT_POS );
   sampler->sampling( intImage, boundingBox );
   std::vector<Mat> posSamples = sampler->getSamples();
 
   //Negative sampling
-  Ptr<TrackerSamplerCSC>( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
+  CSCSampler.staticCast<TrackerSamplerCSC>()->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
   sampler->sampling( intImage, boundingBox );
   std::vector<Mat> negSamples = sampler->getSamples();
 
@@ -159,7 +159,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
   HAARparameters.numFeatures = params.featureSetNumFeatures;
   HAARparameters.rectSize = Size( boundingBox.width, boundingBox.height );
   HAARparameters.isIntegral = true;
-  Ptr<TrackerFeature> trackerFeature = new TrackerFeatureHAAR( HAARparameters );
+  Ptr<TrackerFeature> trackerFeature = Ptr<TrackerFeatureHAAR>( new TrackerFeatureHAAR( HAARparameters ) );
   featureSet->addTrackerFeature( trackerFeature );
 
   featureSet->extraction( posSamples );
@@ -168,14 +168,15 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
   featureSet->extraction( negSamples );
   const std::vector<Mat> negResponse = featureSet->getResponses();
 
-  model = new TrackerMILModel( boundingBox );
-  Ptr<TrackerStateEstimatorMILBoosting> stateEstimator = new TrackerStateEstimatorMILBoosting( params.featureSetNumFeatures );
+  model = Ptr<TrackerMILModel>( new TrackerMILModel( boundingBox ) );
+  Ptr<TrackerStateEstimatorMILBoosting> stateEstimator = Ptr<TrackerStateEstimatorMILBoosting>(
+      new TrackerStateEstimatorMILBoosting( params.featureSetNumFeatures ) );
   model->setTrackerStateEstimator( stateEstimator );
 
   //Run model estimation and update
-  ( (Ptr<TrackerMILModel> ) model )->setMode( TrackerMILModel::MODE_POSITIVE, posSamples );
+  model.staticCast<TrackerMILModel>()->setMode( TrackerMILModel::MODE_POSITIVE, posSamples );
   model->modelEstimation( posResponse );
-  ( (Ptr<TrackerMILModel> ) model )->setMode( TrackerMILModel::MODE_NEGATIVE, negSamples );
+  model.staticCast<TrackerMILModel>()->setMode( TrackerMILModel::MODE_NEGATIVE, negSamples );
   model->modelEstimation( negResponse );
   model->modelUpdate();
 
@@ -193,7 +194,7 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
                         lastLocation->getTargetHeight() );
 
   //sampling new frame based on last location
-  ( (Ptr<TrackerSamplerCSC> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCSC::MODE_DETECT );
+  ( sampler->getSamplers().at( 0 ).second ).staticCast<TrackerSamplerCSC>()->setMode( TrackerSamplerCSC::MODE_DETECT );
   sampler->sampling( intImage, lastBoundingBox );
   std::vector<Mat> detectSamples = sampler->getSamples();
   if( detectSamples.empty() )
@@ -217,9 +218,9 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 
   //predict new location
   ConfidenceMap cmap;
-  ( (Ptr<TrackerMILModel> ) model )->setMode( TrackerMILModel::MODE_ESTIMATON, detectSamples );
-  ( (Ptr<TrackerMILModel> ) model )->responseToConfidenceMap( response, cmap );
-  ( (Ptr<TrackerStateEstimatorMILBoosting> ) model->getTrackerStateEstimator() )->setCurrentConfidenceMap( cmap );
+  model.staticCast<TrackerMILModel>()->setMode( TrackerMILModel::MODE_ESTIMATON, detectSamples );
+  model.staticCast<TrackerMILModel>()->responseToConfidenceMap( response, cmap );
+  model->getTrackerStateEstimator().staticCast<TrackerStateEstimatorMILBoosting>()->setCurrentConfidenceMap( cmap );
 
   if( !model->runStateEstimator() )
   {
@@ -238,12 +239,12 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 
   //sampling new frame based on new location
   //Positive sampling
-  ( (Ptr<TrackerSamplerCSC> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCSC::MODE_INIT_POS );
+  ( sampler->getSamplers().at( 0 ).second ).staticCast<TrackerSamplerCSC>()->setMode( TrackerSamplerCSC::MODE_INIT_POS );
   sampler->sampling( intImage, boundingBox );
   std::vector<Mat> posSamples = sampler->getSamples();
 
   //Negative sampling
-  ( (Ptr<TrackerSamplerCSC> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
+  ( sampler->getSamplers().at( 0 ).second ).staticCast<TrackerSamplerCSC>()->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
   sampler->sampling( intImage, boundingBox );
   std::vector<Mat> negSamples = sampler->getSamples();
 
@@ -258,9 +259,9 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
   std::vector<Mat> negResponse = featureSet->getResponses();
 
   //model estimate
-  ( (Ptr<TrackerMILModel> ) model )->setMode( TrackerMILModel::MODE_POSITIVE, posSamples );
+  model.staticCast<TrackerMILModel>()->setMode( TrackerMILModel::MODE_POSITIVE, posSamples );
   model->modelEstimation( posResponse );
-  ( (Ptr<TrackerMILModel> ) model )->setMode( TrackerMILModel::MODE_NEGATIVE, negSamples );
+  model.staticCast<TrackerMILModel>()->setMode( TrackerMILModel::MODE_NEGATIVE, negSamples );
   model->modelEstimation( negResponse );
 
   //model update
