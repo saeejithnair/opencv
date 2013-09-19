@@ -71,26 +71,26 @@ Ptr<TrackerFeature> TrackerFeature::create( const String& trackerFeatureType )
     String detector = trackerFeatureType.substr( firstSep, secondSep - firstSep );
     String descriptor = trackerFeatureType.substr( secondSep, trackerFeatureType.length() - secondSep );
 
-    return new TrackerFeatureFeature2d( detector, descriptor );
+    return Ptr<TrackerFeatureFeature2d>( new TrackerFeatureFeature2d( detector, descriptor ) );
   }
 
   if( trackerFeatureType.find( "HOG" ) == 0 )
   {
-    return new TrackerFeatureHOG();
+    return Ptr<TrackerFeatureHOG>( new TrackerFeatureHOG() );
   }
 
   if( trackerFeatureType.find( "HAAR" ) == 0 )
   {
-    return new TrackerFeatureHAAR();
+    return Ptr<TrackerFeatureHAAR>( new TrackerFeatureHAAR() );
   }
 
   if( trackerFeatureType.find( "LBP" ) == 0 )
   {
-    return new TrackerFeatureLBP();
+    return Ptr<TrackerFeatureLBP>( new TrackerFeatureLBP() );
   }
 
   CV_Error( -1, "Tracker feature type not supported" );
-  return 0;
+  return Ptr<TrackerFeature>();
 }
 
 String TrackerFeature::getClassName() const
@@ -167,7 +167,7 @@ TrackerFeatureHAAR::TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parame
   CvHaarFeatureParams haarParams;
   haarParams.numFeatures = params.numFeatures;
   haarParams.isIntegral = params.isIntegral;
-  featureEvaluator = CvFeatureEvaluator::create( CvFeatureParams::HAAR );
+  featureEvaluator = CvFeatureEvaluator::create( CvFeatureParams::HAAR ).staticCast<CvHaarEvaluator>();
   featureEvaluator->init( &haarParams, 1, params.rectSize );
   meanSigmaPairs = featureEvaluator->getMeanSigmaPairs();
 }
@@ -246,9 +246,10 @@ class Parallel_compute : public cv::ParallelLoopBody
   //std::vector<CvHaarEvaluator::FeatureHaar> features;
  public:
   Parallel_compute( Ptr<CvHaarEvaluator>& fe, const std::vector<Mat>& img, Mat& resp ) :
-      featureEvaluator(fe),
+      featureEvaluator( fe ),
       images( img ),
-      response( resp ){
+      response( resp )
+  {
 
     //features = featureEvaluator->getFeatures();
   }
@@ -279,7 +280,6 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
   int numFeatures = featureEvaluator->getNumFeatures();
 
   response = Mat_<float>( Size( images.size(), numFeatures ) );
-  //response.create( Size( images.size(), numFeatures ), CV_32F );
 
   std::vector<CvHaarEvaluator::FeatureHaar> f = featureEvaluator->getFeatures();
   //for each sample compute #n_feature -> put each feature (n Rect) in response
@@ -294,7 +294,6 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
       float res = 0;
       featureEvaluator->getFeatures( j ).eval( images[i], Rect( 0, 0, c, r ), &res );
       ( Mat_<float>( response ) )( j, i ) = res;
-      //response.at<float>( j, i ) = res;
     }
   }*/
 
