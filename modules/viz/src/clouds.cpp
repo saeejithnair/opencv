@@ -425,7 +425,9 @@ cv::viz::WMesh::WMesh(const Mesh &mesh)
     actor->GetProperty()->BackfaceCullingOff(); // Backface culling is off for higher efficiency
     actor->GetProperty()->SetInterpolationToFlat();
     actor->GetProperty()->EdgeVisibilityOff();
-    actor->GetProperty()->ShadingOff();
+    actor->GetProperty()->ShadingOn();
+   // actor->GetProperty()->SetColor(20,20,20);
+    actor->GetProperty()->SetAmbient(0.4);
     actor->SetMapper(mapper);
 
     if (!mesh.texture.empty())

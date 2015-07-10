@@ -63,6 +63,7 @@ public:
     void spin();
     void spinOnce(int time = 1, bool force_redraw = false);
 
+    void addRandomLight();
     void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
     void removeWidget(const String &id);
     Widget getWidget(const String &id) const;
@@ -133,6 +134,8 @@ private:
 
     bool removeActorFromRenderer(vtkSmartPointer<vtkProp> actor);
     void recreateRenderWindow();
+
+    RNG rng;
 };
 
 #endif

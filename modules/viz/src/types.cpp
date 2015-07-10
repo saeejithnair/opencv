@@ -89,6 +89,38 @@ cv::viz::Mesh cv::viz::Mesh::load(const String& file)
     return mesh;
 }
 
+cv::viz::Mesh cv::viz::Mesh::loadOBJ(const String& file)
+{
+    vtkSmartPointer<vtkOBJReader> reader = vtkSmartPointer<vtkOBJReader>::New();
+    reader->SetFileName(file.c_str());
+    reader->Update();
+
+    vtkSmartPointer<vtkPolyData> polydata = reader->GetOutput();
+    CV_Assert("File does not exist or file format is not supported." && polydata);
+
+    Mesh mesh;
+    vtkSmartPointer<vtkCloudMatSink> sink = vtkSmartPointer<vtkCloudMatSink>::New();
+    sink->SetOutput(mesh.cloud, mesh.colors, mesh.normals, mesh.tcoords);
+    sink->SetInputConnection(reader->GetOutputPort());
+    sink->Write();
+
+    // Now handle the polygons
+    vtkSmartPointer<vtkCellArray> polygons = polydata->GetPolys();
+    mesh.polygons.create(1, polygons->GetSize(), CV_32SC1);
+    int* poly_ptr = mesh.polygons.ptr<int>();
+
+    polygons->InitTraversal();
+    vtkIdType nr_cell_points, *cell_points;
+    while (polygons->GetNextCell(nr_cell_points, cell_points))
+    {
+        *poly_ptr++ = nr_cell_points;
+        for (vtkIdType i = 0; i < nr_cell_points; ++i)
+            *poly_ptr++ = (int)cell_points[i];
+    }
+
+    return mesh;
+}
+
 ////////////////////////////////////////////////////////////////////
 /// Camera implementation
 

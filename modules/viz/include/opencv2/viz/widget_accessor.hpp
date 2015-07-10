@@ -49,6 +49,10 @@
 #include <opencv2/core/cvdef.h>
 #include <vtkSmartPointer.h>
 #include <vtkProp.h>
+#include <vtkImageNoiseSource.h>
+#include <vtkImageActor.h>
+#include <vtkImageCast.h>
+#include <vtkImageMapper3D.h>
 
 namespace cv
 {

@@ -98,6 +98,7 @@ void cv::viz::Viz3d::release()
     impl_ = 0;
 }
 
+void cv::viz::Viz3d::addRandomLight() { impl_->addRandomLight(); }
 void cv::viz::Viz3d::spin() { impl_->spin(); }
 void cv::viz::Viz3d::spinOnce(int time, bool force_redraw) { impl_->spinOnce(time, force_redraw); }
 bool cv::viz::Viz3d::wasStopped() const { return impl_->wasStopped(); }

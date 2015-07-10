@@ -59,6 +59,8 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     window_->SetSize(window_size.val);
     window_->AddRenderer(renderer_);
 
+    bool supported = vtkFrameBufferObject::IsSupported(window_);
+
     // Create the interactor style
     style_ = vtkSmartPointer<vtkVizInteractorStyle>::New();
     style_->setWidgetActorMap(widget_actor_map_);
@@ -74,6 +76,73 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
 cv::viz::Viz3d::VizImpl::~VizImpl() { close(); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::addRandomLight(){
+
+
+
+  bool supported = vtkFrameBufferObject::IsSupported(window_); // adapted from line 182 of vtkShadowMapPass.cxx
+
+  if(!supported)
+  {
+    std::cerr << "Shadow rendering is not supported by the current video"
+      << " driver!" << std::endl;
+  }
+  renderer_->RemoveAllLights();
+
+  int numLight = rng.uniform(1,3);
+
+  for(int i = 0; i < numLight; i++){
+    double lightPosition[3] = {0, 0, 1};
+
+    // Create a light
+    double lightFocalPoint[3] = {0,0,0};
+
+    vtkSmartPointer<vtkLight> light = vtkSmartPointer<vtkLight>::New();
+    light->SetLightTypeToSceneLight();
+    float xrand = rng.uniform(-0.5f, 0.5f);
+    float yrand = rng.uniform(-0.5f, 0.5f);
+    float zrand = rng.uniform(-0.5f, 0.5f);
+    int coneRand = rng.uniform(50, 120);
+    light->SetPosition(xrand, yrand, zrand);
+    light->SetPositional(true); // required for vtkLightActor below
+    light->SetColor(255,255,255);
+    light->SetConeAngle(coneRand);
+    cout << xrand << " " << yrand << " " << zrand << " " << coneRand << endl;
+    light->SetFocalPoint(lightFocalPoint[0], lightFocalPoint[1], lightFocalPoint[2]);
+    light->SetDiffuseColor(0.7,0.7,0.7);
+    light->SetAmbientColor(0.5,0.5,0.5);
+    light->SetSpecularColor(1,1,1);
+    light->SetSwitch(1);
+
+
+    //renderer_->SetAmbient(255,255,255);
+
+    renderer_->AddLight(light);
+  }
+  //window_->Render();
+
+  // Display where the light is
+  /*vtkSmartPointer<vtkLightActor> lightActor = vtkSmartPointer<vtkLightActor>::New();
+  lightActor->SetLight(light);
+  renderer_->AddViewProp(lightActor);
+
+  // Display where the light is focused
+  vtkSmartPointer<vtkSphereSource> lightFocalPointSphere = vtkSmartPointer<vtkSphereSource>::New();
+  lightFocalPointSphere->SetCenter(lightFocalPoint);
+  lightFocalPointSphere->SetRadius(.1);
+  lightFocalPointSphere->Update();
+
+  vtkSmartPointer<vtkPolyDataMapper> lightFocalPointMapper =
+     vtkSmartPointer<vtkPolyDataMapper>::New();
+  lightFocalPointMapper->SetInputConnection(lightFocalPointSphere->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> lightFocalPointActor = vtkSmartPointer<vtkActor>::New();
+  lightFocalPointActor->SetMapper(lightFocalPointMapper);
+  lightFocalPointActor->GetProperty()->SetColor(1.0, 1.0, 0.0); //(R,G,B)
+  renderer_->AddViewProp(lightFocalPointActor);*/
+
+}
+
 void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned long event_id, void* cookie)
 {
     if (event_id == vtkCommand::TimerEvent && timer_id == *reinterpret_cast<int*>(cookie))
@@ -138,15 +207,21 @@ void cv::viz::Viz3d::VizImpl::spin()
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 #endif
     interactor_->SetRenderWindow(window_);
-    interactor_->SetInteractorStyle(style_);
+    /*interactor_->SetInteractorStyle(style_);
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
     window_->LineSmoothingOff();
     window_->PolygonSmoothingOff();
     window_->SwapBuffersOn();
-    window_->SetStereoTypeToAnaglyph();
-    window_->Render();
+    window_->SetStereoTypeToAnaglyph();*/
+
     window_->SetWindowName(window_name_.c_str());
+
+    //renderer_->RemoveAllLights();
+    //renderer_->SetAmbient(0,0,0);
+
+    addRandomLight();
+    window_->Render();
     interactor_->Start();
     interactor_ = 0;
 }

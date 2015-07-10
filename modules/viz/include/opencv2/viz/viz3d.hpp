@@ -80,6 +80,7 @@ namespace cv
             Viz3d& operator=(const Viz3d&);
             ~Viz3d();
 
+            void addRandomLight();
             /** @brief Shows a widget in the window.
 
             @param id A unique id for the widget. @param widget The widget to be displayed in the window.

@@ -132,6 +132,7 @@ namespace cv
             @param file File name (for now only PLY is supported)
              */
             static Mesh load(const String& file);
+            static Mesh loadOBJ(const String& file);
         };
 
         /** @brief This class wraps intrinsic parameters of a camera.
