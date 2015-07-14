@@ -106,8 +106,7 @@ void cv::viz::Viz3d::VizImpl::addRandomLight(){
     light->SetPosition(xrand, yrand, zrand);
     light->SetPositional(true); // required for vtkLightActor below
     light->SetColor(255,255,255);
-    light->SetConeAngle(coneRand);
-    cout << xrand << " " << yrand << " " << zrand << " " << coneRand << endl;
+    //light->SetConeAngle(coneRand);
     light->SetFocalPoint(lightFocalPoint[0], lightFocalPoint[1], lightFocalPoint[2]);
     light->SetDiffuseColor(0.7,0.7,0.7);
     light->SetAmbientColor(0.5,0.5,0.5);
