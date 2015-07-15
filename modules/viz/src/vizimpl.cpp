@@ -59,7 +59,7 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     window_->SetSize(window_size.val);
     window_->AddRenderer(renderer_);
 
-    bool supported = vtkFrameBufferObject::IsSupported(window_);
+    //bool supported = vtkFrameBufferObject::IsSupported(window_);
 
     // Create the interactor style
     style_ = vtkSmartPointer<vtkVizInteractorStyle>::New();
@@ -76,24 +76,19 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
 cv::viz::Viz3d::VizImpl::~VizImpl() { close(); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::addRandomLight(){
+void cv::viz::Viz3d::VizImpl::SetOffScreenRendering()
+{
+  window_->SetOffScreenRendering( 1 );
+  offScreenMode_ = true;
+}
 
-
-
-  bool supported = vtkFrameBufferObject::IsSupported(window_); // adapted from line 182 of vtkShadowMapPass.cxx
-
-  if(!supported)
-  {
-    std::cerr << "Shadow rendering is not supported by the current video"
-      << " driver!" << std::endl;
-  }
+void cv::viz::Viz3d::VizImpl::addRandomLight()
+{
   renderer_->RemoveAllLights();
 
   int numLight = rng.uniform(1,3);
 
   for(int i = 0; i < numLight; i++){
-    double lightPosition[3] = {0, 0, 1};
-
     // Create a light
     double lightFocalPoint[3] = {0,0,0};
 
@@ -102,7 +97,6 @@ void cv::viz::Viz3d::VizImpl::addRandomLight(){
     float xrand = rng.uniform(-0.5f, 0.5f);
     float yrand = rng.uniform(-0.5f, 0.5f);
     float zrand = rng.uniform(-0.5f, 0.5f);
-    int coneRand = rng.uniform(50, 120);
     light->SetPosition(xrand, yrand, zrand);
     light->SetPositional(true); // required for vtkLightActor below
     light->SetColor(255,255,255);
@@ -113,32 +107,8 @@ void cv::viz::Viz3d::VizImpl::addRandomLight(){
     light->SetSpecularColor(1,1,1);
     light->SetSwitch(1);
 
-
-    //renderer_->SetAmbient(255,255,255);
-
     renderer_->AddLight(light);
   }
-  //window_->Render();
-
-  // Display where the light is
-  /*vtkSmartPointer<vtkLightActor> lightActor = vtkSmartPointer<vtkLightActor>::New();
-  lightActor->SetLight(light);
-  renderer_->AddViewProp(lightActor);
-
-  // Display where the light is focused
-  vtkSmartPointer<vtkSphereSource> lightFocalPointSphere = vtkSmartPointer<vtkSphereSource>::New();
-  lightFocalPointSphere->SetCenter(lightFocalPoint);
-  lightFocalPointSphere->SetRadius(.1);
-  lightFocalPointSphere->Update();
-
-  vtkSmartPointer<vtkPolyDataMapper> lightFocalPointMapper =
-     vtkSmartPointer<vtkPolyDataMapper>::New();
-  lightFocalPointMapper->SetInputConnection(lightFocalPointSphere->GetOutputPort());
-
-  vtkSmartPointer<vtkActor> lightFocalPointActor = vtkSmartPointer<vtkActor>::New();
-  lightFocalPointActor->SetMapper(lightFocalPointMapper);
-  lightFocalPointActor->GetProperty()->SetColor(1.0, 1.0, 0.0); //(R,G,B)
-  renderer_->AddViewProp(lightFocalPointActor);*/
 
 }
 
@@ -197,68 +167,88 @@ void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::spinOffScreen()
+{
+  window_->SetOffScreenRendering( 1 );
+  window_->AddRenderer(renderer_);
+  window_->Render();
+}
+
 void cv::viz::Viz3d::VizImpl::spin()
 {
+    if(offScreenMode_){
+        spinOffScreen();
+        return;
+    }
+
     recreateRenderWindow();
+
 #if defined __APPLE__
     interactor_ = vtkCocoaRenderWindowInteractorNew();
 #else
     interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 #endif
     interactor_->SetRenderWindow(window_);
-    /*interactor_->SetInteractorStyle(style_);
+    interactor_->SetInteractorStyle(style_);
+
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
     window_->LineSmoothingOff();
     window_->PolygonSmoothingOff();
     window_->SwapBuffersOn();
-    window_->SetStereoTypeToAnaglyph();*/
+    window_->SetStereoTypeToAnaglyph();
 
     window_->SetWindowName(window_name_.c_str());
 
     //renderer_->RemoveAllLights();
     //renderer_->SetAmbient(0,0,0);
 
-    addRandomLight();
     window_->Render();
     interactor_->Start();
+
     interactor_ = 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
 {
-    if (interactor_ == 0)
-    {
-        spin_once_state_ = true;
-        recreateRenderWindow();
+  if(offScreenMode_){
+    spinOffScreen();
+    return;
+  }
+  if (interactor_ == 0)
+  {
+    spin_once_state_ = true;
+    recreateRenderWindow();
+
 #if defined __APPLE__
-        interactor_ = vtkCocoaRenderWindowInteractorNew();
+    interactor_ = vtkCocoaRenderWindowInteractorNew();
 #else
-        interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 #endif
-        interactor_->SetRenderWindow(window_);
-        interactor_->SetInteractorStyle(style_);
-        interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
-        interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
-        window_->AlphaBitPlanesOff();
-        window_->PointSmoothingOff();
-        window_->LineSmoothingOff();
-        window_->PolygonSmoothingOff();
-        window_->SwapBuffersOn();
-        window_->SetStereoTypeToAnaglyph();
-        window_->Render();
-        window_->SetWindowName(window_name_.c_str());
-    }
 
-    vtkSmartPointer<vtkRenderWindowInteractor> local = interactor_;
+    interactor_->SetRenderWindow(window_);
+    interactor_->SetInteractorStyle(style_);
+    interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
+    interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
+    window_->AlphaBitPlanesOff();
+    window_->PointSmoothingOff();
+    window_->LineSmoothingOff();
+    window_->PolygonSmoothingOff();
+    window_->SwapBuffersOn();
+    window_->SetStereoTypeToAnaglyph();
+    window_->Render();
+    window_->SetWindowName(window_name_.c_str());
+  }
 
-    if (force_redraw)
-        local->Render();
+  vtkSmartPointer<vtkRenderWindowInteractor> local = interactor_;
 
-    timer_callback_->timer_id = local->CreateRepeatingTimer(std::max(1, time));
-    local->Start();
-    local->DestroyTimer(timer_callback_->timer_id);
+  if (force_redraw)
+    local->Render();
+
+  timer_callback_->timer_id = local->CreateRepeatingTimer(std::max(1, time));
+  local->Start();
+  local->DestroyTimer(timer_callback_->timer_id);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -428,6 +418,38 @@ void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color, const Color
 void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
 { setBackgroundColor(Color(2, 1, 1), Color(240, 120, 120)); }
 
+cv::Mat cv::viz::Viz3d::VizImpl::getMatScreenshot()
+{
+  vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+      vtkSmartPointer<vtkWindowToImageFilter>::New();
+  windowToImageFilter->SetInput(window_);
+  windowToImageFilter->ReadFrontBufferOff(); // read from the back buffer
+  windowToImageFilter->Update();
+
+  vtkImageData *resultImage = windowToImageFilter->GetOutput();
+  int * dim  = resultImage->GetDimensions();
+  cv::Mat image(dim[0], dim[1], CV_8UC3);
+
+  Vec3b* dptr = reinterpret_cast<Vec3b*>(resultImage->GetScalarPointer());
+  size_t elem_step = resultImage->GetIncrements()[1]/sizeof(Vec3b);
+
+  for (int y = 0; y < image.rows; ++y)
+  {
+      const Vec3b* drow = dptr + elem_step * y;
+      unsigned char *srow = image.ptr<unsigned char>(image.rows - y - 1);
+      for (int x = 0; x < image.cols; ++x, srow += image.channels())
+      {
+        srow[0] = drow[x][2];
+        srow[1] = drow[x][1];
+        srow[2] = drow[x][0];
+      }
+  }
+
+  resultImage = 0;
+
+  return image;
+
+}
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setBackgroundTexture(InputArray image)
 {

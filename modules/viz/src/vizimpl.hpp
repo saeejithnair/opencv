@@ -60,9 +60,11 @@ public:
     bool wasStopped() const;
     void close();
 
+    void spinOffScreen();
     void spin();
     void spinOnce(int time = 1, bool force_redraw = false);
 
+    void SetOffScreenRendering();
     void addRandomLight();
     void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
     void removeWidget(const String &id);
@@ -90,6 +92,7 @@ public:
     void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
     void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
 
+    Mat getMatScreenshot();
     void saveScreenshot(const String &file);
     void setWindowPosition(const Point& position);
     Size getWindowSize() const;
@@ -131,6 +134,8 @@ private:
     vtkSmartPointer<vtkRenderer> renderer_;
     vtkSmartPointer<vtkVizInteractorStyle> style_;
     Ptr<WidgetActorMap> widget_actor_map_;
+
+    bool offScreenMode_ = false;
 
     bool removeActorFromRenderer(vtkSmartPointer<vtkProp> actor);
     void recreateRenderWindow();
