@@ -428,7 +428,7 @@ cv::Mat cv::viz::Viz3d::VizImpl::getMatScreenshot()
 
   vtkImageData *resultImage = windowToImageFilter->GetOutput();
   int * dim  = resultImage->GetDimensions();
-  cv::Mat image(dim[0], dim[1], CV_8UC3);
+  cv::Mat image(dim[1], dim[0], CV_8UC3);
 
   Vec3b* dptr = reinterpret_cast<Vec3b*>(resultImage->GetScalarPointer());
   size_t elem_step = resultImage->GetIncrements()[1]/sizeof(Vec3b);
@@ -497,7 +497,7 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     active_camera->SetUserTransform(transform);
 
     renderer_->ResetCameraClippingRange();
-    renderer_->Render();
+    //renderer_->Render();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
