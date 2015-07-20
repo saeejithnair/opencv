@@ -260,6 +260,7 @@ void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget,
     {
         // Remove it if it exists and add it again
         removeActorFromRenderer(wam_itr->second);
+        //widget_actor_map_->erase(wam_itr);
     }
     // Get the actor and set the user matrix
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(widget));
@@ -277,8 +278,8 @@ void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget,
         follower->SetCamera(renderer_->GetActiveCamera());
     }
 
-    renderer_->AddActor(WidgetAccessor::getProp(widget));
-    (*widget_actor_map_)[id] = WidgetAccessor::getProp(widget);
+    renderer_->AddActor(actor);
+    (*widget_actor_map_)[id] = actor;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
