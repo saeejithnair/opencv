@@ -712,6 +712,17 @@ cv::viz::WImage3D::WImage3D(InputArray image, const Size2d &size, const Vec3d &c
     *this = image3d;
 }
 
+void cv::viz::WImage3D::setSize( const cv::Size& size )
+{
+  vtkSmartPointer<vtkActor> actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+  vtkSmartPointer<vtkTextureMapToPlane> textured_plane = vtkTextureMapToPlane::SafeDownCast(mapper->GetInputAlgorithm());
+  vtkSmartPointer<vtkPlaneSource> plane = vtkPlaneSource::SafeDownCast(textured_plane->GetInputAlgorithm());
+  plane->SetOrigin(-0.5 * size.width, -0.5 * size.height, 0.0);
+  plane->SetPoint1( 0.5 * size.width, -0.5 * size.height, 0.0);
+  plane->SetPoint2(-0.5 * size.width,  0.5 * size.height, 0.0);
+}
+
 void cv::viz::WImage3D::setImage(InputArray image)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
