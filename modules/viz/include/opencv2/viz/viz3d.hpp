@@ -82,6 +82,7 @@ namespace cv
 
             cv::Mat getMatScreenshot();
             void addRandomLight();
+            void cameraRoll(double angle);
             void SetOffScreenRendering();
             /** @brief Shows a widget in the window.
 
