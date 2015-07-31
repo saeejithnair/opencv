@@ -3,7 +3,7 @@ if(NOT WITH_VTK OR ANDROID OR IOS)
 endif()
 
 # VTK 6.x components
-find_package(VTK QUIET COMPONENTS vtkRenderingOpenGL vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport vtkImagingSources NO_MODULE)
+find_package(VTK QUIET COMPONENTS vtkRenderingOpenGL vtkInteractionStyle vtkRenderingLOD vtkIOPLY vtkFiltersTexture vtkRenderingFreeType vtkIOExport NO_MODULE)
 
 # VTK 5.x components
 if(NOT VTK_FOUND)
