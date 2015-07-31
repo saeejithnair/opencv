@@ -100,30 +100,6 @@ void cv::viz::Viz3d::VizImpl::addLight(Vec3d position, Vec3d focalPoint, Vec3d c
   renderer_->AddLight(light);
 }
 
-void cv::viz::Viz3d::VizImpl::addRandomLight()
-{
-  int numLight = rng.uniform(1,3);
-
-  for(int i = 0; i < numLight; i++){
-    // Create a light
-    double lightFocalPoint[3] = {0,0,0};
-
-    vtkSmartPointer<vtkLight> light = vtkSmartPointer<vtkLight>::New();
-    float xrand = rng.uniform(-0.5f, 0.5f);
-    float yrand = rng.uniform(-0.5f, 0.5f);
-    float zrand = rng.uniform(-0.5f, 0.5f);
-    light->SetPosition(xrand, yrand, zrand);
-    light->SetColor(255,255,255);
-    light->SetFocalPoint(lightFocalPoint[0], lightFocalPoint[1], lightFocalPoint[2]);
-    light->SetDiffuseColor(0.7,0.7,0.7);
-    light->SetAmbientColor(0.5,0.5,0.5);
-    light->SetSpecularColor(1,1,1);
-
-    renderer_->AddLight(light);
-  }
-
-}
-
 void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned long event_id, void* cookie)
 {
     if (event_id == vtkCommand::TimerEvent && timer_id == *reinterpret_cast<int*>(cookie))

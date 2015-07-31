@@ -84,7 +84,6 @@ namespace cv
             void removeAllLights();
             void addLight(Vec3d position, Vec3d focalPoint = Vec3d(0, 0, 0), Vec3d color = Vec3d(255, 255, 255),
                           Vec3d diffuseColor = Vec3d(1, 1, 1), Vec3d ambientColor = Vec3d(0, 0, 0), Vec3d specularColor = Vec3d(1, 1, 1));
-            void addRandomLight();
             void cameraRoll(double angle);
             void setOffScreenRendering();
             /** @brief Shows a widget in the window.
