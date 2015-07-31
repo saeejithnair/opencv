@@ -130,10 +130,7 @@
 #include <vtkElevationFilter.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkStreamingDemandDrivenPipeline.h>
-#include <vtkLightCollection.h>
 #include <vtkLight.h>
-#include <vtkLightActor.h>
-#include <vtkFrameBufferObject.h>
 #include "vtkCallbackCommand.h"
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
