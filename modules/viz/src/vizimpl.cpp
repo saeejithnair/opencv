@@ -59,8 +59,6 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     window_->SetSize(window_size.val);
     window_->AddRenderer(renderer_);
 
-    //bool supported = vtkFrameBufferObject::IsSupported(window_);
-
     // Create the interactor style
     style_ = vtkSmartPointer<vtkVizInteractorStyle>::New();
     style_->setWidgetActorMap(widget_actor_map_);
@@ -167,22 +165,9 @@ void cv::viz::Viz3d::VizImpl::recreateRenderWindow()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::spinOffScreen()
-{
-  window_->SetOffScreenRendering( 1 );
-  window_->AddRenderer(renderer_);
-  window_->Render();
-}
-
 void cv::viz::Viz3d::VizImpl::spin()
 {
-    if(offScreenMode_){
-        spinOffScreen();
-        return;
-    }
-
     recreateRenderWindow();
-
 #if defined __APPLE__
     interactor_ = vtkCocoaRenderWindowInteractorNew();
 #else
@@ -190,65 +175,52 @@ void cv::viz::Viz3d::VizImpl::spin()
 #endif
     interactor_->SetRenderWindow(window_);
     interactor_->SetInteractorStyle(style_);
-
     window_->AlphaBitPlanesOff();
     window_->PointSmoothingOff();
     window_->LineSmoothingOff();
     window_->PolygonSmoothingOff();
     window_->SwapBuffersOn();
     window_->SetStereoTypeToAnaglyph();
-
-    window_->SetWindowName(window_name_.c_str());
-
-    //renderer_->RemoveAllLights();
-    //renderer_->SetAmbient(0,0,0);
-
     window_->Render();
+    window_->SetWindowName(window_name_.c_str());
     interactor_->Start();
-
     interactor_ = 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
 {
-  if(offScreenMode_){
-    spinOffScreen();
-    return;
-  }
-  if (interactor_ == 0)
-  {
-    spin_once_state_ = true;
-    recreateRenderWindow();
-
+    if (interactor_ == 0)
+    {
+        spin_once_state_ = true;
+        recreateRenderWindow();
 #if defined __APPLE__
-    interactor_ = vtkCocoaRenderWindowInteractorNew();
+        interactor_ = vtkCocoaRenderWindowInteractorNew();
 #else
-    interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+        interactor_ = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 #endif
+        interactor_->SetRenderWindow(window_);
+        interactor_->SetInteractorStyle(style_);
+        interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
+        interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
+        window_->AlphaBitPlanesOff();
+        window_->PointSmoothingOff();
+        window_->LineSmoothingOff();
+        window_->PolygonSmoothingOff();
+        window_->SwapBuffersOn();
+        window_->SetStereoTypeToAnaglyph();
+        window_->Render();
+        window_->SetWindowName(window_name_.c_str());
+    }
 
-    interactor_->SetRenderWindow(window_);
-    interactor_->SetInteractorStyle(style_);
-    interactor_->AddObserver(vtkCommand::TimerEvent, timer_callback_);
-    interactor_->AddObserver(vtkCommand::ExitEvent, exit_callback_);
-    window_->AlphaBitPlanesOff();
-    window_->PointSmoothingOff();
-    window_->LineSmoothingOff();
-    window_->PolygonSmoothingOff();
-    window_->SwapBuffersOn();
-    window_->SetStereoTypeToAnaglyph();
-    window_->Render();
-    window_->SetWindowName(window_name_.c_str());
-  }
+    vtkSmartPointer<vtkRenderWindowInteractor> local = interactor_;
 
-  vtkSmartPointer<vtkRenderWindowInteractor> local = interactor_;
+    if (force_redraw)
+        local->Render();
 
-  if (force_redraw)
-    local->Render();
-
-  timer_callback_->timer_id = local->CreateRepeatingTimer(std::max(1, time));
-  local->Start();
-  local->DestroyTimer(timer_callback_->timer_id);
+    timer_callback_->timer_id = local->CreateRepeatingTimer(std::max(1, time));
+    local->Start();
+    local->DestroyTimer(timer_callback_->timer_id);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -260,7 +232,6 @@ void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget,
     {
         // Remove it if it exists and add it again
         removeActorFromRenderer(wam_itr->second);
-        //widget_actor_map_->erase(wam_itr);
     }
     // Get the actor and set the user matrix
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(widget));

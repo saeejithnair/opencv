@@ -60,7 +60,6 @@ public:
     bool wasStopped() const;
     void close();
 
-    void spinOffScreen();
     void spin();
     void spinOnce(int time = 1, bool force_redraw = false);
 
