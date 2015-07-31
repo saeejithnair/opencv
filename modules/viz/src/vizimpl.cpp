@@ -76,16 +76,19 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
 cv::viz::Viz3d::VizImpl::~VizImpl() { close(); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::SetOffScreenRendering()
+void cv::viz::Viz3d::VizImpl::setOffScreenRendering()
 {
   window_->SetOffScreenRendering( 1 );
   offScreenMode_ = true;
 }
 
-void cv::viz::Viz3d::VizImpl::addRandomLight()
+void cv::viz::Viz3d::VizImpl::removeAllLights()
 {
   renderer_->RemoveAllLights();
+}
 
+void cv::viz::Viz3d::VizImpl::addRandomLight()
+{
   int numLight = rng.uniform(1,3);
 
   for(int i = 0; i < numLight; i++){

@@ -63,7 +63,8 @@ public:
     void spin();
     void spinOnce(int time = 1, bool force_redraw = false);
 
-    void SetOffScreenRendering();
+    void setOffScreenRendering();
+    void removeAllLights();
     void addRandomLight();
     void cameraRoll(double angle);
     void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());

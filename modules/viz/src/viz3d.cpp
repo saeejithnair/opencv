@@ -99,8 +99,9 @@ void cv::viz::Viz3d::release()
 }
 
 cv::Mat cv::viz::Viz3d::getMatScreenshot() { return impl_->getMatScreenshot(); }
-void cv::viz::Viz3d::SetOffScreenRendering() { impl_->SetOffScreenRendering(); }
+void cv::viz::Viz3d::setOffScreenRendering() { impl_->setOffScreenRendering(); }
 void cv::viz::Viz3d::addRandomLight() { impl_->addRandomLight(); }
+void cv::viz::Viz3d::removeAllLights() { impl_->removeAllLights(); }
 void cv::viz::Viz3d::cameraRoll(double angle) { impl_->cameraRoll(angle); }
 void cv::viz::Viz3d::spin() { impl_->spin(); }
 void cv::viz::Viz3d::spinOnce(int time, bool force_redraw) { impl_->spinOnce(time, force_redraw); }

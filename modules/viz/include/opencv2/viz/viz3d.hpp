@@ -81,9 +81,10 @@ namespace cv
             ~Viz3d();
 
             cv::Mat getMatScreenshot();
+            void removeAllLights();
             void addRandomLight();
             void cameraRoll(double angle);
-            void SetOffScreenRendering();
+            void setOffScreenRendering();
             /** @brief Shows a widget in the window.
 
             @param id A unique id for the widget. @param widget The widget to be displayed in the window.
