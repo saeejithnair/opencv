@@ -426,7 +426,6 @@ cv::viz::WMesh::WMesh(const Mesh &mesh)
     actor->GetProperty()->SetInterpolationToFlat();
     actor->GetProperty()->EdgeVisibilityOff();
     actor->GetProperty()->ShadingOff();
-    actor->GetProperty()->SetAmbient(0.4);
     actor->SetMapper(mapper);
 
     if (!mesh.texture.empty())

@@ -66,7 +66,8 @@ namespace cv
             FONT_SIZE,
             REPRESENTATION,
             IMMEDIATE_RENDERING,
-            SHADING
+            SHADING,
+            AMBIENT
         };
 
         enum RepresentationValues
@@ -136,6 +137,7 @@ namespace cv
             -   **OPACITY**
             -   **LINE_WIDTH**
             -   **FONT_SIZE**
+            -   **AMBIENT**
             -
             **REPRESENTATION**: Expected values are
             :   -   **REPRESENTATION_POINTS**
