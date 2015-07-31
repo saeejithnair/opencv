@@ -477,9 +477,6 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 void cv::viz::Viz3d::VizImpl::cameraRoll(double angle)
 {
   vtkSmartPointer<vtkCamera> active_camera = renderer_->GetActiveCamera();
-  active_camera->SetPosition(0,0,1);
-  active_camera->SetFocalPoint(0,0,0);
-  active_camera->SetViewUp(0,-1,0);
   active_camera->SetRoll(angle);
 }
 
