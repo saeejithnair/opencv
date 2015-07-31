@@ -65,6 +65,7 @@ public:
 
     void setOffScreenRendering();
     void removeAllLights();
+    void addLight(Vec3d position, Vec3d focalPoint, Vec3d color, Vec3d diffuseColor, Vec3d ambientColor, Vec3d specularColor);
     void addRandomLight();
     void cameraRoll(double angle);
     void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());

@@ -87,6 +87,19 @@ void cv::viz::Viz3d::VizImpl::removeAllLights()
   renderer_->RemoveAllLights();
 }
 
+void cv::viz::Viz3d::VizImpl::addLight(Vec3d position, Vec3d focalPoint, Vec3d color, Vec3d diffuseColor, Vec3d ambientColor, Vec3d specularColor)
+{
+  vtkSmartPointer<vtkLight> light = vtkSmartPointer<vtkLight>::New();
+  light->SetPosition(position.val);
+  light->SetFocalPoint(focalPoint.val);
+  light->SetColor(color.val);
+  light->SetDiffuseColor(diffuseColor.val);
+  light->SetAmbientColor(ambientColor.val);
+  light->SetSpecularColor(specularColor.val);
+
+  renderer_->AddLight(light);
+}
+
 void cv::viz::Viz3d::VizImpl::addRandomLight()
 {
   int numLight = rng.uniform(1,3);
@@ -96,19 +109,15 @@ void cv::viz::Viz3d::VizImpl::addRandomLight()
     double lightFocalPoint[3] = {0,0,0};
 
     vtkSmartPointer<vtkLight> light = vtkSmartPointer<vtkLight>::New();
-    light->SetLightTypeToSceneLight();
     float xrand = rng.uniform(-0.5f, 0.5f);
     float yrand = rng.uniform(-0.5f, 0.5f);
     float zrand = rng.uniform(-0.5f, 0.5f);
     light->SetPosition(xrand, yrand, zrand);
-    light->SetPositional(true); // required for vtkLightActor below
     light->SetColor(255,255,255);
-    //light->SetConeAngle(coneRand);
     light->SetFocalPoint(lightFocalPoint[0], lightFocalPoint[1], lightFocalPoint[2]);
     light->SetDiffuseColor(0.7,0.7,0.7);
     light->SetAmbientColor(0.5,0.5,0.5);
     light->SetSpecularColor(1,1,1);
-    light->SetSwitch(1);
 
     renderer_->AddLight(light);
   }

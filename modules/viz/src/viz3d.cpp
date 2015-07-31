@@ -100,6 +100,8 @@ void cv::viz::Viz3d::release()
 
 cv::Mat cv::viz::Viz3d::getMatScreenshot() { return impl_->getMatScreenshot(); }
 void cv::viz::Viz3d::setOffScreenRendering() { impl_->setOffScreenRendering(); }
+void cv::viz::Viz3d::addLight(Vec3d position, Vec3d focalPoint, Vec3d color, Vec3d diffuseColor, Vec3d ambientColor, Vec3d specularColor)
+{  impl_->addLight(position, focalPoint, color, diffuseColor, ambientColor, specularColor);  }
 void cv::viz::Viz3d::addRandomLight() { impl_->addRandomLight(); }
 void cv::viz::Viz3d::removeAllLights() { impl_->removeAllLights(); }
 void cv::viz::Viz3d::cameraRoll(double angle) { impl_->cameraRoll(angle); }
