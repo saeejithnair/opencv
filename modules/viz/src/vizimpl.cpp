@@ -68,6 +68,8 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
     exit_callback_ = vtkSmartPointer<ExitCallback>::New();
     exit_callback_->viz = this;
 
+    offScreenMode_ = false;
+
     setBackgroundMeshLab();
 }
 
@@ -469,7 +471,7 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     active_camera->SetUserTransform(transform);
 
     renderer_->ResetCameraClippingRange();
-    //renderer_->Render();
+    renderer_->Render();
 }
 
 void cv::viz::Viz3d::VizImpl::cameraRoll(double angle)

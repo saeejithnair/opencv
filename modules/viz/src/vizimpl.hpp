@@ -135,7 +135,7 @@ private:
     vtkSmartPointer<vtkVizInteractorStyle> style_;
     Ptr<WidgetActorMap> widget_actor_map_;
 
-    bool offScreenMode_ = false;
+    bool offScreenMode_;
 
     bool removeActorFromRenderer(vtkSmartPointer<vtkProp> actor);
     void recreateRenderWindow();
