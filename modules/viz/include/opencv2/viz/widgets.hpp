@@ -496,7 +496,7 @@ namespace cv
             @param image BGR or Gray-Scale image.
              */
             void setImage(InputArray image);
-            void setSize( const Size& size );
+            void setSize(const Size& size);
         };
 
         /////////////////////////////////////////////////////////////////////////////

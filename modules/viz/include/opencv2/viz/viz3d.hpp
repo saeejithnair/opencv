@@ -80,12 +80,6 @@ namespace cv
             Viz3d& operator=(const Viz3d&);
             ~Viz3d();
 
-            cv::Mat getMatScreenshot();
-            void removeAllLights();
-            void addLight(Vec3d position, Vec3d focalPoint = Vec3d(0, 0, 0), Vec3d color = Vec3d(255, 255, 255),
-                          Vec3d diffuseColor = Vec3d(1, 1, 1), Vec3d ambientColor = Vec3d(0, 0, 0), Vec3d specularColor = Vec3d(1, 1, 1));
-            void cameraRoll(double angle);
-            void setOffScreenRendering();
             /** @brief Shows a widget in the window.
 
             @param id A unique id for the widget. @param widget The widget to be displayed in the window.
@@ -148,6 +142,8 @@ namespace cv
             */
             Camera getCamera() const;
 
+            void cameraRoll(double angle);
+
             /** @brief Returns the current pose of the viewer.
             */
             Affine3d getViewerPose();
@@ -195,6 +191,8 @@ namespace cv
              */
             String getWindowName() const;
 
+            cv::Mat getMatScreenshot();
+
             /** @brief Saves screenshot of the current scene.
 
             @param file Name of the file.
@@ -229,6 +227,13 @@ namespace cv
             @param force_redraw If true, window renders.
              */
             void spinOnce(int time = 1, bool force_redraw = false);
+
+            void setOffScreenRendering();
+
+            void removeAllLights();
+
+            void addLight(Vec3d position, Vec3d focalPoint = Vec3d(0, 0, 0), Vec3d color = Vec3d(255, 255, 255),
+                          Vec3d diffuseColor = Vec3d(1, 1, 1), Vec3d ambientColor = Vec3d(0, 0, 0), Vec3d specularColor = Vec3d(1, 1, 1));
 
             /** @brief Returns whether the event loop has been stopped.
             */

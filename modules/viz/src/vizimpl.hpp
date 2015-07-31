@@ -62,11 +62,11 @@ public:
 
     void spin();
     void spinOnce(int time = 1, bool force_redraw = false);
-
     void setOffScreenRendering();
+
     void removeAllLights();
     void addLight(Vec3d position, Vec3d focalPoint, Vec3d color, Vec3d diffuseColor, Vec3d ambientColor, Vec3d specularColor);
-    void cameraRoll(double angle);
+
     void showWidget(const String &id, const Widget &widget, const Affine3d &pose = Affine3d::Identity());
     void removeWidget(const String &id);
     Widget getWidget(const String &id) const;
@@ -82,6 +82,7 @@ public:
 
     void setCamera(const Camera &camera);
     Camera getCamera() const;
+    void cameraRoll(double angle);
 
     /** \brief Reset the camera to a given widget */
     void resetCameraViewpoint(const String& id);

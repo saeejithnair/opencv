@@ -76,30 +76,6 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name) : spin_once_state_(false),
 cv::viz::Viz3d::VizImpl::~VizImpl() { close(); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setOffScreenRendering()
-{
-  window_->SetOffScreenRendering( 1 );
-  offScreenMode_ = true;
-}
-
-void cv::viz::Viz3d::VizImpl::removeAllLights()
-{
-  renderer_->RemoveAllLights();
-}
-
-void cv::viz::Viz3d::VizImpl::addLight(Vec3d position, Vec3d focalPoint, Vec3d color, Vec3d diffuseColor, Vec3d ambientColor, Vec3d specularColor)
-{
-  vtkSmartPointer<vtkLight> light = vtkSmartPointer<vtkLight>::New();
-  light->SetPosition(position.val);
-  light->SetFocalPoint(focalPoint.val);
-  light->SetColor(color.val);
-  light->SetDiffuseColor(diffuseColor.val);
-  light->SetAmbientColor(ambientColor.val);
-  light->SetSpecularColor(specularColor.val);
-
-  renderer_->AddLight(light);
-}
-
 void cv::viz::Viz3d::VizImpl::TimerCallback::Execute(vtkObject* caller, unsigned long event_id, void* cookie)
 {
     if (event_id == vtkCommand::TimerEvent && timer_id == *reinterpret_cast<int*>(cookie))
@@ -214,6 +190,33 @@ void cv::viz::Viz3d::VizImpl::spinOnce(int time, bool force_redraw)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setOffScreenRendering()
+{
+    window_->SetOffScreenRendering(1);
+    offScreenMode_ = true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::removeAllLights()
+{
+    renderer_->RemoveAllLights();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::addLight(Vec3d position, Vec3d focalPoint, Vec3d color, Vec3d diffuseColor, Vec3d ambientColor, Vec3d specularColor)
+{
+    vtkSmartPointer<vtkLight> light = vtkSmartPointer<vtkLight>::New();
+    light->SetPosition(position.val);
+    light->SetFocalPoint(focalPoint.val);
+    light->SetColor(color.val);
+    light->SetDiffuseColor(diffuseColor.val);
+    light->SetAmbientColor(ambientColor.val);
+    light->SetSpecularColor(specularColor.val);
+
+    renderer_->AddLight(light);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3d &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
@@ -320,6 +323,39 @@ cv::Affine3d cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 void cv::viz::Viz3d::VizImpl::saveScreenshot(const String &file) { style_->saveScreenshot(file.c_str()); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+cv::Mat cv::viz::Viz3d::VizImpl::getMatScreenshot()
+{
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+        vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImageFilter->SetInput(window_);
+    windowToImageFilter->ReadFrontBufferOff(); // read from the back buffer
+    windowToImageFilter->Update();
+
+    vtkImageData *resultImage = windowToImageFilter->GetOutput();
+    int * dim  = resultImage->GetDimensions();
+    cv::Mat image(dim[1], dim[0], CV_8UC3);
+
+    Vec3b* dptr = reinterpret_cast<Vec3b*>(resultImage->GetScalarPointer());
+    size_t elem_step = resultImage->GetIncrements()[1]/sizeof(Vec3b);
+
+    for (int y = 0; y < image.rows; ++y)
+    {
+        const Vec3b* drow = dptr + elem_step * y;
+        unsigned char *srow = image.ptr<unsigned char>(image.rows - y - 1);
+        for (int x = 0; x < image.cols; ++x, srow += image.channels())
+        {
+          srow[0] = drow[x][2];
+          srow[1] = drow[x][1];
+          srow[2] = drow[x][0];
+        }
+    }
+
+    resultImage = 0;
+
+    return image;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::registerMouseCallback(MouseCallback callback, void* cookie)
 { style_->registerMouseCallback(callback, cookie); }
 
@@ -380,38 +416,6 @@ void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color, const Color
 void cv::viz::Viz3d::VizImpl::setBackgroundMeshLab()
 { setBackgroundColor(Color(2, 1, 1), Color(240, 120, 120)); }
 
-cv::Mat cv::viz::Viz3d::VizImpl::getMatScreenshot()
-{
-  vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
-      vtkSmartPointer<vtkWindowToImageFilter>::New();
-  windowToImageFilter->SetInput(window_);
-  windowToImageFilter->ReadFrontBufferOff(); // read from the back buffer
-  windowToImageFilter->Update();
-
-  vtkImageData *resultImage = windowToImageFilter->GetOutput();
-  int * dim  = resultImage->GetDimensions();
-  cv::Mat image(dim[1], dim[0], CV_8UC3);
-
-  Vec3b* dptr = reinterpret_cast<Vec3b*>(resultImage->GetScalarPointer());
-  size_t elem_step = resultImage->GetIncrements()[1]/sizeof(Vec3b);
-
-  for (int y = 0; y < image.rows; ++y)
-  {
-      const Vec3b* drow = dptr + elem_step * y;
-      unsigned char *srow = image.ptr<unsigned char>(image.rows - y - 1);
-      for (int x = 0; x < image.cols; ++x, srow += image.channels())
-      {
-        srow[0] = drow[x][2];
-        srow[1] = drow[x][1];
-        srow[2] = drow[x][0];
-      }
-  }
-
-  resultImage = 0;
-
-  return image;
-
-}
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setBackgroundTexture(InputArray image)
 {
@@ -462,12 +466,6 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     renderer_->Render();
 }
 
-void cv::viz::Viz3d::VizImpl::cameraRoll(double angle)
-{
-  vtkSmartPointer<vtkCamera> active_camera = renderer_->GetActiveCamera();
-  active_camera->SetRoll(angle);
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 {
@@ -479,6 +477,13 @@ cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 
     vtkSmartPointer<vtkMatrix4x4> proj_matrix = active_camera->GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f);
     return Camera(Matx44d(*proj_matrix->Element), window_size);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::cameraRoll(double angle)
+{
+    vtkSmartPointer<vtkCamera> active_camera = renderer_->GetActiveCamera();
+    active_camera->SetRoll(angle);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
