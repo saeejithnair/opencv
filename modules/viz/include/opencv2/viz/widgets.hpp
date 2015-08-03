@@ -496,6 +496,11 @@ namespace cv
             @param image BGR or Gray-Scale image.
              */
             void setImage(InputArray image);
+
+            /** @brief Sets the image size of the widget.
+
+            @param size the new size of the image.
+             */
             void setSize(const Size& size);
         };
 

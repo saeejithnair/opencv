@@ -142,6 +142,10 @@ namespace cv
             */
             Camera getCamera() const;
 
+            /** @brief Sets pose the camera roll. This will spin the camera about its axis.
+
+            @param angle The new roll angle in degrees of the camera.
+             */
             void cameraRoll(double angle);
 
             /** @brief Returns the current pose of the viewer.
@@ -191,6 +195,8 @@ namespace cv
              */
             String getWindowName() const;
 
+            /** @brief Returns the Mat screenshot of the current scene.
+            */
             cv::Mat getMatScreenshot();
 
             /** @brief Saves screenshot of the current scene.
@@ -228,10 +234,23 @@ namespace cv
              */
             void spinOnce(int time = 1, bool force_redraw = false);
 
+            /** @brief Create a window in memory instead of on the screen.
+             */
             void setOffScreenRendering();
 
+            /** @brief Remove all lights from the current scene.
+            */
             void removeAllLights();
 
+            /** @brief Add a light in the scene.
+
+            @param position The position of the light.
+            @param focalPoint The point at which the light is shining
+            @param color The color of the light
+            @param diffuseColor The diffuse color of the light
+            @param ambientColor The ambient color of the light
+            @param specularColor The specular color of the light
+             */
             void addLight(Vec3d position, Vec3d focalPoint = Vec3d(0, 0, 0), Vec3d color = Vec3d(255, 255, 255),
                           Vec3d diffuseColor = Vec3d(1, 1, 1), Vec3d ambientColor = Vec3d(0, 0, 0), Vec3d specularColor = Vec3d(1, 1, 1));
 

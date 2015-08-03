@@ -132,6 +132,11 @@ namespace cv
             @param file File name (for now only PLY is supported)
              */
             static Mesh load(const String& file);
+
+            /** @brief Loads a mesh from a obj file.
+
+            @param file File name
+            */
             static Mesh loadOBJ(const String& file);
         };
 
